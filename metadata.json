@@ -1,0 +1,9 @@
+
+{
+  "name": "Gracie Barra Andradas",
+  "description": "Plataforma oficial da Escola Gracie Barra Andradas - Jiu-Jitsu para Todos. Baseado na identidade visual premium da GB Wear.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
