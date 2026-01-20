@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminService, StudentProfile } from '../services/admin';
 import { User, Shield, Users, Award, Users2 } from 'lucide-react';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 
 const CATEGORIES = ['GB K', 'GB1', 'GB2', 'GB F'];
 
@@ -115,8 +116,17 @@ const MuralAlunos: React.FC = () => {
     );
 
     return (
-        <div className="min-h-screen bg-white pt-40 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-white pt-24 sm:pt-32 lg:pt-40 pb-20 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
+                {/* Breadcrumb Navigation */}
+                <div className="mb-6">
+                    <Breadcrumb
+                        items={[
+                            { label: 'Mural de Alunos', icon: <Users2 className="w-4 h-4" /> }
+                        ]}
+                    />
+                </div>
+
                 <div className="text-center mb-20">
                     <div className="inline-flex items-center justify-center space-x-2 bg-red-50 px-4 py-2 rounded-full mb-6 border border-red-100">
                         <Users2 className="w-4 h-4 text-red-600" />

@@ -23,6 +23,26 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const [fullName, setFullName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const emailInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Auto-focus email input when modal opens
+    React.useEffect(() => {
+        if (isOpen && emailInputRef.current) {
+            setTimeout(() => emailInputRef.current?.focus(), 100);
+        }
+    }, [isOpen]);
+
+    // Handle ESC key to close modal
+    React.useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen && !loading) {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [isOpen, loading, onClose]);
 
 
 
@@ -163,24 +183,32 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
             <div
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
+                onClick={loading ? undefined : onClose}
+                aria-hidden="true"
             ></div>
 
-            <div className="relative bg-white w-full max-w-md p-8 shadow-2xl animate-fade-in-up">
+            <div
+                className="relative bg-white w-full max-w-md p-6 sm:p-8 shadow-2xl animate-fade-in-up max-h-[90vh] overflow-y-auto rounded-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+            >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-black transition-colors"
+                    disabled={loading}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-black transition-colors disabled:opacity-50 p-2 rounded-lg hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label="Fechar modal"
                 >
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
 
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-black uppercase tracking-tighter text-gray-900">
+                <div className="text-center mb-6 sm:mb-8">
+                    <h2 id="modal-title" className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-gray-900">
                         {mode === 'login' ? 'Área do Aluno' : 'Criar Conta'}
                     </h2>
                     <p className="text-gray-500 text-sm mt-2">
@@ -200,7 +228,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 <button
                     onClick={handleGoogleLogin}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-3 border-2 border-gray-100 p-3 mb-6 hover:bg-gray-50 transition-colors font-bold text-sm"
+                    className="w-full flex items-center justify-center gap-3 border-2 border-gray-100 p-3 sm:p-4 mb-6 hover:bg-gray-50 transition-colors font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed rounded-xl min-h-[48px]"
+                    aria-label="Entrar com Google"
                 >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path
@@ -256,10 +285,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         <input
                             type="text"
                             required
+                            ref={emailInputRef}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full border-2 border-gray-100 p-3 outline-none focus:border-red-600 transition-colors"
+                            className="w-full border-2 border-gray-100 p-3 sm:p-4 outline-none focus:border-red-600 transition-colors rounded-lg"
                             placeholder="seu@email.com ou 'admin'"
+                            autoComplete="email"
+                            aria-label="Email"
                         />
                     </div>
 
@@ -272,8 +304,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full border-2 border-gray-100 p-3 outline-none focus:border-red-600 transition-colors"
+                            className="w-full border-2 border-gray-100 p-3 sm:p-4 outline-none focus:border-red-600 transition-colors rounded-lg"
                             placeholder="••••••••"
+                            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                            aria-label="Senha"
                         />
                     </div>
 
@@ -296,9 +330,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-red-600 hover:bg-black text-white p-4 font-black uppercase text-sm tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-red-600 hover:bg-black text-white p-4 font-black uppercase text-sm tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded-xl min-h-[56px] active:scale-95"
                     >
-                        {loading ? 'Processando...' : (mode === 'login' ? 'Entrar' : 'Criar Conta')}
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processando...
+                            </span>
+                        ) : (mode === 'login' ? 'Entrar' : 'Criar Conta')}
                     </button>
 
                     <div className="text-center text-xs">

@@ -14,7 +14,7 @@ const programs: Program[] = [
     id: 'gb-1',
     title: 'GB1 Fundamentals',
     description: 'O ponto de partida para sua jornada. Aprenda as bases essenciais da defesa pessoal.',
-    image: '/programs/gb1-v2.png',
+    image: '/programs/gb1-fundamentals-new.png',
     target: 'Iniciantes / Todos os Níveis'
   },
   {

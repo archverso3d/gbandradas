@@ -56,43 +56,43 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8 transition-all duration-500">
             {/* Header / Week Selector */}
-            <div className={`${themeColor} p-4 text-white cursor-pointer select-none`} onClick={() => setIsExpanded(!isExpanded)}>
+            <div className={`${themeColor} p-3 sm:p-4 text-white cursor-pointer select-none`} onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="flex items-center justify-between max-w-4xl mx-auto">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-white/10 rounded-xl">
-                            <Shield className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                        <div className="p-1.5 sm:p-2 bg-white/10 rounded-xl flex-shrink-0">
+                            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 sm:gap-3 flex-1 min-w-0">
                             <button
                                 onClick={handlePrevWeek}
-                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                className="p-1 sm:p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                                 title="Semana Anterior"
                             >
-                                <ChevronLeft className="w-5 h-5" />
+                                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
-                            <div className="text-left">
-                                <h2 className="text-2xl font-black uppercase tracking-tighter leading-none whitespace-nowrap">Semana {selectedWeek}</h2>
-                                <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest mt-1">Currículo Semanal</p>
+                            <div className="text-left min-w-0">
+                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter leading-none whitespace-nowrap">Semana {selectedWeek}</h2>
+                                <p className="text-[9px] sm:text-[10px] font-bold opacity-70 uppercase tracking-widest mt-0.5 sm:mt-1">Currículo Semanal</p>
                             </div>
                             <button
                                 onClick={handleNextWeek}
-                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                className="p-1 sm:p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                                 title="Próxima Semana"
                             >
-                                <ChevronRight className="w-5 h-5" />
+                                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                         <div className="hidden md:flex gap-2 mr-4">
                             <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">
                                 {program === 'gb1' ? 'Programa GB1' : 'Programa GB2'}
                             </span>
                         </div>
-                        <div className="w-px h-8 bg-white/20 mx-2"></div>
-                        <button className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                            {isExpanded ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
+                        <div className="w-px h-6 sm:h-8 bg-white/20 mx-1 sm:mx-2 hidden sm:block"></div>
+                        <button className="p-0.5 sm:p-1 hover:bg-white/10 rounded-full transition-colors flex-shrink-0">
+                            {isExpanded ? <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6" /> : <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6" />}
                         </button>
                     </div>
                 </div>
@@ -104,26 +104,28 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
                 <div className="bg-gray-50 border-b border-gray-100 p-2 flex justify-center gap-2">
                     <button
                         onClick={() => setProgram('gb1')}
-                        className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${program === 'gb1'
+                        className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all ${program === 'gb1'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                             : 'bg-white text-gray-400 hover:text-gray-600'
                             }`}
                     >
-                        Programa GB1
+                        <span className="hidden sm:inline">Programa GB1</span>
+                        <span className="sm:hidden">GB1</span>
                     </button>
                     <div className="relative group">
                         <button
                             onClick={() => isEligibleForGB2() && setProgram('gb2')}
                             disabled={!isEligibleForGB2()}
-                            className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${program === 'gb2'
+                            className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all flex items-center gap-1 sm:gap-2 ${program === 'gb2'
                                 ? 'bg-purple-700 text-white shadow-md shadow-purple-200'
                                 : isEligibleForGB2()
                                     ? 'bg-white text-gray-400 hover:text-gray-600'
                                     : 'bg-gray-100 text-gray-300 cursor-not-allowed'
                                 }`}
                         >
-                            Programa GB2
-                            {!isEligibleForGB2() && <Info className="w-3.5 h-3.5" />}
+                            <span className="hidden sm:inline">Programa GB2</span>
+                            <span className="sm:hidden">GB2</span>
+                            {!isEligibleForGB2() && <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                         </button>
                         {!isEligibleForGB2() && (
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">

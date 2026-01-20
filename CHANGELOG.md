@@ -1,5 +1,15 @@
 # CHANGELOG - Gracie Barra Andradas
 
+## [0.5.0] - 2026-01-20 17:56 BRT
+
+### 🚀 Deployment & Updates
+
+- **Version 0.5.0 Release**
+- Updated application version and metadata
+- Prepared for full web and mobile deployment
+
+---
+
 ## [0.4.1] - 2026-01-20 15:41 BRT
 
 ### 🐛 Bug Fixes

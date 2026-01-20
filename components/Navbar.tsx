@@ -11,6 +11,7 @@ const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, signOut, loading } = useAuth();
@@ -34,6 +35,12 @@ const Navbar: React.FC = () => {
     { name: 'Sobre Nós', href: '/#sobre' },
     { name: 'Contato', href: '/#contato' },
   ];
+
+  // Check if current location matches a nav link
+  const isActiveLink = (href: string) => {
+    if (location.pathname === '/' && href.startsWith('/#')) return true;
+    return false;
+  };
 
   return (
     <>
@@ -84,17 +91,21 @@ const Navbar: React.FC = () => {
                       {loading ? '...' : (isAdmin ? 'Admin' : 'Painel')}
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Force immediate logout
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        window.location.href = '/';
+                      onClick={async () => {
+                        console.log('🚪 SignOut button clicked');
+                        setLoggingOut(true);
+                        try {
+                          await signOut();
+                        } catch (err) {
+                          console.error('Logout error:', err);
+                        } finally {
+                          setLoggingOut(false);
+                        }
                       }}
-                      className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-full font-black uppercase text-[10px] tracking-widest transition-all"
+                      disabled={loggingOut}
+                      className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-full font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Sair
+                      {loggingOut ? '...' : 'Sair'}
                     </button>
                   </div>
                 ) : (
@@ -118,12 +129,14 @@ const Navbar: React.FC = () => {
               </div>
             </div>
 
-            {/* Mobile Toggle */}
+            {/* Mobile Toggle - Increased touch target */}
             <div className="lg:hidden">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={`p-2 rounded-xl transition-colors ${showSolidNavbar ? 'bg-slate-50 text-slate-900' : 'bg-white/10 text-white backdrop-blur-md'
+                className={`p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all duration-300 flex items-center justify-center ${showSolidNavbar ? 'bg-slate-50 text-slate-900 hover:bg-slate-100' : 'bg-white/10 text-white backdrop-blur-md hover:bg-white/20'
                   }`}
+                aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+                aria-expanded={mobileMenuOpen}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
@@ -137,10 +150,12 @@ const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Improved UX */}
         <div
           className={`lg:hidden transition-all duration-500 ease-in-out bg-white/95 backdrop-blur-xl border-t border-gray-100 overflow-hidden ${mobileMenuOpen ? 'max-h-[100vh] opacity-100' : 'max-h-0 opacity-0'
             }`}
+          role="navigation"
+          aria-label="Menu mobile"
         >
           <div className="px-6 py-8 space-y-6">
             <div className="flex flex-col space-y-2">
@@ -148,11 +163,11 @@ const Navbar: React.FC = () => {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="px-4 py-4 text-slate-900 font-black uppercase text-sm tracking-widest border-b border-gray-50 flex items-center justify-between group active:bg-slate-50 rounded-xl transition-all"
+                  className="px-4 py-4 min-h-[44px] text-slate-900 font-black uppercase text-sm tracking-widest border-b border-gray-50 flex items-center justify-between group active:bg-slate-50 rounded-xl transition-all"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.name}
-                  <span className="w-2 h-2 rounded-full bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                  <span className="w-2 h-2 rounded-full bg-red-600 opacity-0 group-active:opacity-100 transition-opacity"></span>
                 </a>
               ))}
             </div>
@@ -165,24 +180,29 @@ const Navbar: React.FC = () => {
                       setMobileMenuOpen(false);
                       navigate(isAdmin ? '/admin' : '/aluno');
                     }}
-                    className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-slate-200"
+                    disabled={loading}
+                    className="w-full min-h-[56px] bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-slate-200 active:scale-95 transition-transform disabled:opacity-50"
+                    aria-label="Acessar painel do usuário"
                   >
-                    Acessar Painel
+                    {loading ? 'Carregando...' : 'Acessar Painel'}
                   </button>
                   <button
                     onClick={async () => {
                       setMobileMenuOpen(false);
+                      setLoggingOut(true);
                       try {
                         await signOut();
                       } catch (err) {
                         console.error('Logout error:', err);
                       } finally {
-                        navigate('/');
+                        setLoggingOut(false);
                       }
                     }}
-                    className="w-full bg-white border-2 border-slate-100 text-slate-400 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em]"
+                    disabled={loggingOut}
+                    className="w-full min-h-[56px] bg-white border-2 border-slate-100 text-slate-400 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] active:scale-95 transition-transform disabled:opacity-50"
+                    aria-label="Sair da conta"
                   >
-                    Sair da Conta
+                    {loggingOut ? 'Saindo...' : 'Sair da Conta'}
                   </button>
                 </div>
               ) : (
@@ -191,14 +211,16 @@ const Navbar: React.FC = () => {
                     setMobileMenuOpen(false);
                     setIsLoginOpen(true);
                   }}
-                  className="w-full bg-white border-2 border-gray-100 text-slate-900 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:border-red-600 transition-all"
+                  className="w-full min-h-[56px] bg-white border-2 border-gray-100 text-slate-900 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:border-red-600 active:scale-95 transition-all"
+                  aria-label="Fazer login"
                 >
                   Login / Alunos
                 </button>
               )}
               <button
                 onClick={() => window.open(SCHOOL_INFO.whatsappUrl(), '_blank')}
-                className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-red-200"
+                className="w-full min-h-[56px] bg-red-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-red-200 active:scale-95 transition-transform"
+                aria-label="Agendar aula experimental"
               >
                 Aula Experimental
               </button>

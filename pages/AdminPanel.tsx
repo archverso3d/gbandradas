@@ -16,6 +16,7 @@ import { StudentSidebar } from '../components/admin/StudentSidebar';
 import { StudentDetailsEditor } from '../components/admin/StudentDetailsEditor';
 import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculum';
 import { WeeklyCurriculum } from '../components/student/WeeklyCurriculum';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 
 const AdminPanel: React.FC = () => {
     const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -98,19 +99,14 @@ const AdminPanel: React.FC = () => {
 
             // Re-load students to sync the main list
             await loadStudents();
+            notification.alert('Dados do aluno atualizados com sucesso!', 'Sucesso');
         } catch (error: any) {
             console.error('Error updating student:', error);
-            const errorMessage = error?.message || error?.details || error?.hint || JSON.stringify(error);
-            if (error) {
-                console.log('Logging out as profile session might be invalid:', error);
-                await signOut();
-                navigate('/');
-                return;
-            }
-            setIsSaved(true);
-            setTimeout(() => setIsSaved(false), 3000);
+            const errorMessage = error?.message || error?.details || error?.hint || 'Erro de conexão ou permissão';
+            notification.alert(`Não foi possível salvar os dados: ${errorMessage}`, 'Erro ao Atualizar');
         }
     };
+
 
     const handleToggleSelect = (id: string) => {
         setSelectedStudentIds(prev =>
@@ -192,8 +188,17 @@ const AdminPanel: React.FC = () => {
     if (!isAdmin) return null;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pt-24 lg:pt-40 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[#F8FAFC] pt-24 lg:pt-32 xl:pt-40 pb-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
+                {/* Breadcrumb Navigation */}
+                <div className="mb-6">
+                    <Breadcrumb
+                        items={[
+                            { label: 'Painel Administrativo', icon: <LayoutDashboard className="w-4 h-4" /> }
+                        ]}
+                    />
+                </div>
+
                 {/* Header Section */}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div className="space-y-1">
@@ -212,10 +217,11 @@ const AdminPanel: React.FC = () => {
                         {/* Mobile Sidebar Toggle */}
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
-                            className="lg:hidden px-4 py-2 bg-slate-900 text-white rounded-xl font-bold uppercase text-xs tracking-widest flex items-center gap-2"
+                            className="lg:hidden px-4 py-3 min-h-[48px] bg-slate-900 text-white rounded-xl font-bold uppercase text-xs tracking-widest flex items-center gap-2 active:scale-95 transition-transform"
+                            aria-label={showSidebar ? 'Ocultar lista de alunos' : 'Mostrar lista de alunos'}
                         >
                             <Users className="w-4 h-4" />
-                            {showSidebar ? 'Ocultar Lista' : 'Lista de Alunos'}
+                            <span>{showSidebar ? 'Ocultar Lista' : 'Lista de Alunos'}</span>
                         </button>
                     </div>
                 </header>

@@ -20,6 +20,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
         return () => clearTimeout(timer);
     }, [loading]);
 
+    // 1. Loading State
+    // Show loading spinner while AuthContext is initializing
     if (loading && !isTimingOut) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -33,8 +35,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
         );
     }
 
-    // 1. Check Authentication
+    // 2. Check Authentication
     if (!user) {
+        console.log('🚫 [ProtectedRoute] No user found. Redirecting to home.');
         // Redirect to home (login) but save the location they tried to access
         return <Navigate to="/" state={{ from: location }} replace />;
     }

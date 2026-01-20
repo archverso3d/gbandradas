@@ -6,11 +6,12 @@ import { CalendarComponent } from '../components/CalendarComponent';
 import { TechniqueVault } from '../components/student/TechniqueVault';
 import { WeeklyCurriculum } from '../components/student/WeeklyCurriculum';
 import { TrainingHistory } from '../components/student/TrainingHistory';
-import { LogOut, User as UserIcon, Settings, Calendar } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, Calendar, ArrowUp } from 'lucide-react';
 import { adminService } from '../services/admin';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculum';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 
 // Types
 interface AttendanceRecord {
@@ -47,7 +48,18 @@ const StudentArea: React.FC = () => {
     const [graduation, setGraduation] = useState<Graduation | null>(null);
     const [techniques, setTechniques] = useState<Technique[]>([]);
     const [currentWeek, setCurrentWeek] = useState<number>(getCurrentCurriculumWeek());
+    const [showBackToTop, setShowBackToTop] = useState(false);
     const notification = useNotification();
+
+    // Show/hide back to top button based on scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            setShowBackToTop(window.scrollY > 400);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
 
     useEffect(() => {
@@ -276,28 +288,41 @@ const StudentArea: React.FC = () => {
         }
     };
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     return (
-        <div className="w-full bg-gray-50 pt-40 pb-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full bg-gray-50 pt-20 sm:pt-24 lg:pt-40 pb-12">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                {/* Breadcrumb Navigation */}
+                <div className="mb-6">
+                    <Breadcrumb
+                        items={[
+                            { label: 'Área do Aluno', icon: <UserIcon className="w-4 h-4" /> }
+                        ]}
+                    />
+                </div>
+
                 {/* Header */}
-                <div className="bg-white shadow-sm rounded-2xl p-6 mb-8 border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center border-2 border-red-50 text-red-600">
+                <div className="bg-white shadow-sm rounded-2xl p-3 sm:p-6 mb-8 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center border-2 border-red-50 text-red-600 flex-shrink-0">
                             {user?.user_metadata?.avatar_url ? (
                                 <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full rounded-full object-cover" />
                             ) : (
-                                <UserIcon className="w-8 h-8" />
+                                <UserIcon className="w-6 h-6 sm:w-8 sm:h-8" />
                             )}
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 tracking-tight truncate">
                                 Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Visitante'}
                             </h1>
-                            <div className="flex flex-wrap items-center gap-3 mt-1">
-                                <p className="text-gray-500 text-sm font-medium">Bem-vindo à sua área exclusiva</p>
-                                <div className="flex items-center gap-2 text-xs font-bold uppercase">
-                                    <span className="w-1 h-3 bg-gray-300 rounded-full hidden md:block"></span>
-                                    <span className={`px-2.5 py-0.5 rounded-full ${(() => {
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1 sm:gap-3 mt-1">
+                                <p className="text-gray-500 text-xs sm:text-sm font-medium">Bem-vindo à sua área exclusiva</p>
+                                <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase">
+                                    <span className="w-1 h-3 bg-gray-300 rounded-full hidden sm:block"></span>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs ${(() => {
                                         const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
                                         if (belt.includes('white') || belt.includes('branca')) return 'bg-white border border-gray-200 text-gray-800';
                                         if (belt.includes('blue') || belt.includes('azul')) return 'bg-blue-600 text-white';
@@ -310,23 +335,25 @@ const StudentArea: React.FC = () => {
                                         {graduation?.current_belt || 'Faixa Branca'} {graduation?.degrees !== undefined ? `- ${graduation.degrees}º Grau` : '- 0º Grau'}
                                     </span>
                                     {graduation?.next_forecast && (
-                                        <span className="text-red-600 flex items-center gap-1 normal-case font-semibold">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            Próxima graduação: {new Date(graduation.next_forecast).toLocaleDateString('pt-BR')}
+                                        <span className="text-red-600 flex items-center gap-1 normal-case font-semibold text-[10px] sm:text-xs">
+                                            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                            <span className="hidden sm:inline">Próxima graduação: {new Date(graduation.next_forecast).toLocaleDateString('pt-BR')}</span>
+                                            <span className="sm:hidden">{new Date(graduation.next_forecast).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
                                         </span>
                                     )}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-100/50 shadow-sm transition-all hover:shadow-md">
+                    <div className="flex items-center gap-3 bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-100/50 shadow-sm transition-all hover:shadow-md w-full md:w-auto justify-end">
                         {isAdmin && (
                             <button
                                 onClick={() => navigate('/admin')}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-600 font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all"
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-600 font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all min-h-[44px]"
+                                aria-label="Ir para painel administrativo"
                             >
                                 <Settings className="w-3.5 h-3.5" />
-                                Admin
+                                <span className="hidden sm:inline">Admin</span>
                             </button>
                         )}
                     </div>
@@ -378,6 +405,17 @@ const StudentArea: React.FC = () => {
                         />
                     </div>
                 </div>
+
+                {/* Floating Back to Top Button */}
+                {showBackToTop && (
+                    <button
+                        onClick={scrollToTop}
+                        className="fixed bottom-6 right-6 z-50 bg-red-600 text-white p-4 rounded-full shadow-2xl hover:bg-red-700 transition-all hover:scale-110 active:scale-95 min-w-[56px] min-h-[56px] flex items-center justify-center lg:hidden"
+                        aria-label="Voltar ao topo"
+                    >
+                        <ArrowUp className="w-6 h-6" />
+                    </button>
+                )}
             </div>
         </div>
     );
