@@ -39,7 +39,15 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
         return true;
     };
 
-    // Manual navigation handlers removed as per "obsolete" request
+    const handlePrevWeek = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedWeek(prev => (prev > 1 ? prev - 1 : 16));
+    };
+
+    const handleNextWeek = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedWeek(prev => (prev < 16 ? prev + 1 : 1));
+    };
 
     const themeColor = program === 'gb1' ? 'bg-blue-600' : 'bg-purple-700';
     const textColor = program === 'gb1' ? 'text-blue-600' : 'text-purple-700';
@@ -54,9 +62,25 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
                         <div className="p-2 bg-white/10 rounded-xl">
                             <Shield className="w-5 h-5 text-white" />
                         </div>
-                        <div className="text-left">
-                            <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Semana {selectedWeek}</h2>
-                            <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest mt-1">Currículo Semanal</p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handlePrevWeek}
+                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                title="Semana Anterior"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <div className="text-left">
+                                <h2 className="text-2xl font-black uppercase tracking-tighter leading-none whitespace-nowrap">Semana {selectedWeek}</h2>
+                                <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest mt-1">Currículo Semanal</p>
+                            </div>
+                            <button
+                                onClick={handleNextWeek}
+                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                title="Próxima Semana"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
 

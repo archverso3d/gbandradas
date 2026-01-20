@@ -6,7 +6,8 @@ import {
     Users,
     Settings,
     ArrowLeft,
-    LayoutDashboard
+    LayoutDashboard,
+    LogOut
 } from 'lucide-react';
 import { StudentMural } from '../components/admin/StudentMural';
 import { useNotification } from '../context/NotificationContext';
@@ -14,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { StudentSidebar } from '../components/admin/StudentSidebar';
 import { StudentDetailsEditor } from '../components/admin/StudentDetailsEditor';
 import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculum';
+import { WeeklyCurriculum } from '../components/student/WeeklyCurriculum';
 
 const AdminPanel: React.FC = () => {
     const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -29,7 +31,7 @@ const AdminPanel: React.FC = () => {
     const [confirmingBatch, setConfirmingBatch] = useState(false);
     const notification = useNotification();
 
-    const { user, isAdmin, loading: authLoading } = useAuth();
+    const { user, isAdmin, signOut, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -209,21 +211,31 @@ const AdminPanel: React.FC = () => {
                             {showSidebar ? 'Ocultar Lista' : 'Lista de Alunos'}
                         </button>
 
-                        {/* Week Logic */}
-                        <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3 px-2">
-                                <div className="p-1.5 bg-red-50 rounded-lg">
-                                    <Calendar className="w-4 h-4 text-red-600" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">Currículo</span>
-                                    <span className="text-sm font-black text-slate-900 uppercase italic leading-none mt-0.5">Semana {currentWeek}</span>
-                                </div>
-                            </div>
-                            {/* Manual navigation buttons removed to ensure it updates "alone" */}
-                        </div>
+
+
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await signOut();
+                                    notification.alert('Sessão administrativa encerrada.', 'Até logo!');
+                                } finally {
+                                    navigate('/');
+                                }
+                            }}
+                            className="px-5 py-3 bg-slate-900 text-white hover:bg-black rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-slate-200 flex items-center gap-2"
+                        >
+                            <LogOut className="w-3.5 h-3.5" />
+                            Sair
+                        </button>
                     </div>
                 </header>
+
+                <div className="mb-8">
+                    <WeeklyCurriculum
+                        currentBelt="Faixa Preta" // Admins see everything (GB1 & GB2)
+                        defaultWeek={currentWeek}
+                    />
+                </div>
 
                 <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     {/* Left: Student Directory */}
@@ -249,9 +261,9 @@ const AdminPanel: React.FC = () => {
                                 <div className="flex items-center justify-between px-1">
                                     <button
                                         onClick={() => setSelectedStudent(null)}
-                                        className="flex items-center gap-2 text-slate-400 hover:text-red-600 font-black text-[9px] uppercase tracking-[0.2em] transition-all group"
+                                        className="flex items-center gap-2 text-slate-600 hover:text-red-600 font-black text-xs uppercase tracking-[0.2em] transition-all group"
                                     >
-                                        <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
+                                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                                         Mural de Alunos
                                     </button>
                                     <div className="h-0.5 w-8 bg-slate-100 rounded-full" />
@@ -291,69 +303,71 @@ const AdminPanel: React.FC = () => {
                     </div>
                 </main>
                 {/* Batch Action Bar */}
-                {selectedStudentIds.length > 0 && (
-                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-300">
-                        <div className={`
+                {
+                    selectedStudentIds.length > 0 && (
+                        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-300">
+                            <div className={`
                             px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 border transition-all duration-300
                             ${confirmingBatch ? 'bg-red-600 border-red-500 text-white' : 'bg-slate-900 border-slate-800 text-white'}
                         `}>
-                            {confirmingBatch ? (
-                                <>
-                                    <div className="flex items-center gap-3 pr-6 border-r border-red-500/50">
-                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-xs text-red-600">
-                                            ?
+                                {confirmingBatch ? (
+                                    <>
+                                        <div className="flex items-center gap-3 pr-6 border-r border-red-500/50">
+                                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-xs text-red-600">
+                                                ?
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold uppercase tracking-widest text-white">Confirmar Lançamento?</span>
+                                                <span className="text-[10px] font-medium text-red-200">
+                                                    {selectedStudentIds.length} alunos • S{getCurrentCurriculumWeek()}{getClassLabelByDay()}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold uppercase tracking-widest text-white">Confirmar Lançamento?</span>
-                                            <span className="text-[10px] font-medium text-red-200">
-                                                {selectedStudentIds.length} alunos • S{getCurrentCurriculumWeek()}{getClassLabelByDay()}
-                                            </span>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setConfirmingBatch(false)}
+                                                className="text-[10px] font-black uppercase tracking-[0.2em] text-red-200 hover:text-white transition-colors"
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                onClick={executeBatchAttendance}
+                                                className="bg-white text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-xl font-black uppercase tracking-widest italic text-xs transition-all shadow-lg"
+                                            >
+                                                Sim, Lançar
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => setConfirmingBatch(false)}
-                                            className="text-[10px] font-black uppercase tracking-[0.2em] text-red-200 hover:text-white transition-colors"
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            onClick={executeBatchAttendance}
-                                            className="bg-white text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-xl font-black uppercase tracking-widest italic text-xs transition-all shadow-lg"
-                                        >
-                                            Sim, Lançar
-                                        </button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
-                                        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-black text-xs">
-                                            {selectedStudentIds.length}
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
+                                            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-black text-xs">
+                                                {selectedStudentIds.length}
+                                            </div>
+                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Alunos Selecionados</span>
                                         </div>
-                                        <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Alunos Selecionados</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => setSelectedStudentIds([])}
-                                            className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-white transition-colors"
-                                        >
-                                            Limpar
-                                        </button>
-                                        <button
-                                            onClick={() => setConfirmingBatch(true)}
-                                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest italic text-xs transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
-                                        >
-                                            Confirmar Presenças (S{getCurrentCurriculumWeek()}{getClassLabelByDay()})
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setSelectedStudentIds([])}
+                                                className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-white transition-colors"
+                                            >
+                                                Limpar
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmingBatch(true)}
+                                                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest italic text-xs transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                                            >
+                                                Confirmar Presenças (S{getCurrentCurriculumWeek()}{getClassLabelByDay()})
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </div>
+                    )
+                }
+            </div >
+        </div >
     );
 };
 

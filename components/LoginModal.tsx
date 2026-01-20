@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { getAuthRedirectUrl } from '../utils/authHelpers';
+
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -12,6 +14,8 @@ type AuthMode = 'login' | 'signup';
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
+    const [redirectPending, setRedirectPending] = useState(false);
+    const { refreshProfile, user, profile, isAdmin } = useAuth();
     const [mode, setMode] = useState<AuthMode>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -19,20 +23,48 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const [fullName, setFullName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { refreshProfile } = useAuth();
 
-    if (!isOpen) return null;
+
+
+    // Handle redirect after successful login/signup AND context update
+    React.useEffect(() => {
+        if (redirectPending && user) {
+            // We have a user in context, now check if we need to wait for profile
+            // If we are admin, we definitely need profile to confirm role
+            // If StudentArea checks profile, we might want to wait too, but usually user is enough for access
+
+            // Just for safety, let's give a tiny delay or ensure profile is loaded if possible
+            // But relying on 'profile' being non-null might hang if profile fetch fails
+
+            const performRedirect = () => {
+                setRedirectPending(false);
+                onClose();
+                if (isAdmin || (profile?.role === 'admin')) {
+                    navigate('/admin');
+                } else {
+                    navigate('/aluno');
+                }
+            };
+
+            // If profile is already loaded or we have a user and profile is loading... 
+            // Let's just go. The pages handle their own loading states mostly.
+            // But checking isAdmin requires profile.
+            if (profile) {
+                performRedirect();
+            } else {
+                // If profile is stuck, fallback to student after a timeout? 
+                // Or just wait. AuthContext should fetch profile quickly.
+            }
+        }
+    }, [redirectPending, user, profile, isAdmin, navigate, onClose]);
+
 
     const toggleMode = () => {
         setMode(mode === 'login' ? 'signup' : 'login');
         setError('');
     };
 
-    const getSafeOrigin = () => {
-        return window.location.origin === 'null' || !window.location.origin || window.location.origin.includes('localhost')
-            ? 'https://gbandradas.vercel.app'
-            : window.location.origin;
-    };
+
 
     const handleGoogleLogin = async () => {
         setError('');
@@ -41,7 +73,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             const { error: oauthError } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${getSafeOrigin()}/aluno`,
+                    redirectTo: getAuthRedirectUrl(),
+
                 }
             });
 
@@ -87,23 +120,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 }
 
                 if (data.session) {
-                    // Force profile refresh in context
+                    // Trigger context refresh (optimistic)
                     await refreshProfile();
-
-                    // The profile fetch in context might take a moment, 
-                    // but we can also do a quick local check for admin role for immediate navigation
-                    const { data: profile } = await supabase
-                        .from('user_profiles')
-                        .select('role')
-                        .eq('user_id', data.session.user.id)
-                        .single();
-
-                    onClose();
-                    if (profile?.role === 'admin') {
-                        navigate('/admin');
-                    } else {
-                        navigate('/aluno');
-                    }
+                    // Set flag to wait for context update in useEffect
+                    setRedirectPending(true);
                 }
             } else {
                 const { data, error: signUpError } = await supabase.auth.signUp({
@@ -113,7 +133,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         data: {
                             full_name: fullName,
                         },
-                        emailRedirectTo: `${getSafeOrigin()}/aluno`
+                        emailRedirectTo: getAuthRedirectUrl()
+
                     }
                 });
 
@@ -125,8 +146,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
                 if (data.user) {
                     if (data.session) {
-                        onClose();
-                        navigate('/aluno');
+                        setRedirectPending(true);
                     } else {
                         setError('Cadastro realizado! Por favor, verifique seu e-mail.');
                         setLoading(false);
@@ -136,10 +156,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         } catch (err) {
             console.error('Auth error:', err);
             setError('Ocorreu um erro. Tente novamente.');
-        } finally {
-            if (mode === 'login') setLoading(false);
+            setLoading(false);
         }
+        // Note: We don't set loading(false) here if successful, expecting redirect to unmount or close
     };
+
+    // Early return MOVED to after hooks to prevent "Rendered more hooks" error
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

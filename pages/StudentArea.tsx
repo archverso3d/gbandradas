@@ -55,17 +55,19 @@ const StudentArea: React.FC = () => {
             if (!user) {
                 navigate('/');
             } else {
+                console.log('StudentArea: Fetching data for user:', user.id, 'Profile:', profile);
                 fetchData(user.id);
                 setCurrentWeek(getCurrentCurriculumWeek());
             }
         }
-    }, [user, authLoading, navigate]);
+    }, [user, authLoading, navigate, profile]); // Added profile to dependencies
 
     const fetchData = async (userId: string) => {
         setLoading(true);
         try {
-            // Use profile from auth context for basic info, but we still need to fetch attendance and history
+            // Use profile from auth context for basic info
             if (profile) {
+                console.log('StudentArea: Setting initial graduation from profile:', profile);
                 setGraduation({
                     current_belt: profile.current_belt || 'Faixa Branca',
                     degrees: profile.degrees || 0,
@@ -181,8 +183,12 @@ const StudentArea: React.FC = () => {
     };
 
     const handleLogout = async () => {
-        await signOut();
-        navigate('/');
+        try {
+            await signOut();
+            notification.alert('Sessão encerrada com sucesso.', 'Até logo!');
+        } finally {
+            navigate('/');
+        }
     };
 
     const handleAddTechnique = async (newTech: Omit<Technique, 'id'> & { category_id?: string }) => {
@@ -299,21 +305,21 @@ const StudentArea: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-100/50 shadow-sm transition-all hover:shadow-md">
                         {isAdmin && (
                             <button
                                 onClick={() => navigate('/admin')}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-slate-200 text-slate-700 font-bold uppercase text-xs tracking-widest hover:bg-slate-50 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-600 font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all"
                             >
-                                <Settings className="w-4 h-4" />
-                                Painel Admin
+                                <Settings className="w-3.5 h-3.5" />
+                                Admin
                             </button>
                         )}
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-red-100 text-red-600 font-bold uppercase text-xs tracking-widest hover:bg-red-50 transition-colors"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200"
                         >
-                            <LogOut className="w-4 h-4" />
+                            <LogOut className="w-3.5 h-3.5" />
                             Sair
                         </button>
                     </div>

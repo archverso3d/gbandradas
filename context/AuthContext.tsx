@@ -54,22 +54,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (user) await fetchProfile(user.id);
     };
 
+    const signOut = async () => {
+        /**
+         * SEGURANÇA & BOAS PRÁTICAS:
+         * 1. Backend SignOut: Invalida o token JWT no servidor Supabase.
+         * 2. State Cleanup: Remove o usuário do estado global do React para atualizar a UI instantaneamente.
+         * 3. Storage Cleanup: Remove manualmente chaves do localStorage para evitar persistência indesejada.
+         * 4. Session/Cookie Cleanup: Limpa dados residuais para mitigar sequestro de sessão.
+         */
+        try {
+            console.log('AuthContext: Iniciando processo de logout...');
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Erro ao encerrar sessão no Supabase:', error);
+            }
+        } catch (error) {
+            console.error('Erro inesperado durante o logout:', error);
+        } finally {
+            // Limpa o estado global independente do resultado da requisição de rede
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+
+            try {
+                // Limpeza agressiva do LocalStorage (Supabase usa o prefixo 'sb-')
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token'))) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                // Limpa SessionStorage para evitar vazamento de dados entre abas
+                sessionStorage.clear();
+
+                // Limpeza opcional de cookies residuais (boa prática de segurança)
+                document.cookie.split(";").forEach((c) => {
+                    document.cookie = c
+                        .replace(/^ +/, "")
+                        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+
+                console.log('AuthContext: Estado local e storage limpos com sucesso.');
+            } catch (storageError) {
+                console.error('Erro ao limpar storage durante o logout:', storageError);
+            }
+        }
+    };
+
     useEffect(() => {
         const initializeAuth = async () => {
-            setLoading(true);
-            const { data: { session } } = await supabase.auth.getSession();
-            setSession(session);
-            setUser(session?.user ?? null);
+            // Safety timeout: force loading to false after 5s to prevent infinite spinner
+            const timeoutId = setTimeout(() => setLoading(false), 5000);
 
-            if (session?.user) {
-                await fetchProfile(session.user.id);
+            try {
+                setLoading(true);
+                const { data: { session } } = await supabase.auth.getSession();
+                setSession(session);
+                setUser(session?.user ?? null);
+
+                if (session?.user) {
+                    await fetchProfile(session.user.id);
+                }
+            } catch (error) {
+                console.error("Auth initialization error:", error);
+            } finally {
+                clearTimeout(timeoutId);
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         initializeAuth();
 
-        // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
@@ -79,6 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
                 setProfile(null);
             }
+            // Ensure loading is turned off after auth change
             setLoading(false);
         });
 
@@ -86,13 +145,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             subscription.unsubscribe();
         };
     }, []);
-
-    const signOut = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
-        setProfile(null);
-    };
 
     const isAdmin = profile?.role === 'admin';
 

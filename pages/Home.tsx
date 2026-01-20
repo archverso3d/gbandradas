@@ -2,6 +2,7 @@ import React from 'react';
 import Hero from '../components/Hero';
 import Programs from '../components/Programs';
 import Schedule from '../components/Schedule';
+import { SCHOOL_INFO } from '../constants/schoolInfo';
 
 const Home: React.FC = () => {
     return (
@@ -65,12 +66,11 @@ const Home: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
                         {[
                             { name: 'Professor Principal', rank: 'Faixa Preta 1º Grau', img: '/professor-chin.png' },
-                            { name: 'Instrutor GB1', rank: 'Faixa Preta', img: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=800&auto=format&fit=crop' },
-                            { name: 'Instrutora Kids', rank: 'Faixa Marrom', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop' }
+                            { name: 'Instrutor GB1', rank: 'Faixa Roxa', img: '/instrutor-gabriel.png' }
                         ].map((inst, i) => (
                             <div key={i} className="group cursor-pointer">
                                 <div className="aspect-[3/4] overflow-hidden grayscale hover:grayscale-0 transition-all duration-700 mb-6 border border-gray-800 p-2">
-                                    <img src={inst.img} alt={inst.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                    <img src={inst.img} alt={inst.name} className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
                                 </div>
                                 <h4 className="text-xl font-bold uppercase tracking-tight">{inst.name}</h4>
                                 <p className="text-red-600 text-xs font-black uppercase tracking-widest mt-1">{inst.rank}</p>
@@ -88,7 +88,10 @@ const Home: React.FC = () => {
                     <h3 className="text-white text-3xl md:text-5xl font-black uppercase tracking-tighter mb-8">
                         Pronto para começar sua jornada?
                     </h3>
-                    <button className="bg-white text-red-600 hover:bg-black hover:text-white px-12 py-5 font-black uppercase text-sm tracking-widest transition-all shadow-xl">
+                    <button
+                        onClick={() => window.open(SCHOOL_INFO.whatsappUrl(), '_blank')}
+                        className="bg-white text-red-600 hover:bg-black hover:text-white px-12 py-5 font-black uppercase text-sm tracking-widest transition-all shadow-xl"
+                    >
                         Agendar Minha Aula Grátis Agora
                     </button>
                 </div>

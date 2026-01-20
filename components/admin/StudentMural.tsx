@@ -232,7 +232,7 @@ const MuralCard: React.FC<{
                     <div className={`aspect-square rounded-xl bg-slate-50 overflow-hidden border-2 relative transition-colors ${isSelected ? 'border-red-500' : 'border-slate-50'
                         }`}>
                         {student.avatar_url ? (
-                            <img src={student.avatar_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            <img src={student.avatar_url} alt="" className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-500" />
                         ) : (
                             <div className="flex items-center justify-center h-full opacity-10">
                                 <User className="w-8 h-8 text-slate-400" />

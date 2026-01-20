@@ -1,11 +1,12 @@
 
 import React from 'react';
+import { SCHOOL_INFO } from '../constants/schoolInfo';
 
 const Hero: React.FC = () => {
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
       {/* Background with Overlay */}
-      <div 
+      <div
         className="absolute inset-0 z-0 bg-cover bg-center"
         style={{ backgroundImage: `url('/hero-bg.png')` }}
       >
@@ -24,7 +25,10 @@ const Hero: React.FC = () => {
           <a href="#programas" className="bg-red-600 hover:bg-red-700 text-white px-10 py-4 font-bold uppercase text-sm tracking-widest transition-all w-full sm:w-auto">
             Ver Programas
           </a>
-          <button className="border-2 border-white hover:bg-white hover:text-black text-white px-10 py-4 font-bold uppercase text-sm tracking-widest transition-all w-full sm:w-auto">
+          <button
+            onClick={() => window.open(SCHOOL_INFO.whatsappUrl(), '_blank')}
+            className="border-2 border-white hover:bg-white hover:text-black text-white px-10 py-4 font-bold uppercase text-sm tracking-widest transition-all w-full sm:w-auto"
+          >
             Aula Grátis
           </button>
         </div>

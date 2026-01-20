@@ -201,7 +201,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
                         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-50 to-white border-2 border-white flex items-center justify-center overflow-hidden shadow-lg shadow-slate-200/50 shrink-0">
                             {student.avatar_url ? (
-                                <img src={student.avatar_url} alt="" className="w-full h-full object-cover" />
+                                <img src={student.avatar_url} alt="" className="w-full h-full object-cover object-top" />
                             ) : (
                                 <User className="w-10 h-10 text-slate-200" />
                             )}

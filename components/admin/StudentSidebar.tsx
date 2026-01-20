@@ -66,7 +66,7 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({
                                     <div className="relative">
                                         <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex-shrink-0 overflow-hidden shadow-sm flex items-center justify-center">
                                             {student.avatar_url ? (
-                                                <img src={student.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                <img src={student.avatar_url} alt="" className="w-full h-full object-cover object-top" />
                                             ) : (
                                                 <User className="w-6 h-6 text-slate-300" />
                                             )}

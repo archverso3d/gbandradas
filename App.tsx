@@ -12,30 +12,36 @@ import { AuthCallbackHandler } from './services/authCallbackHandler';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 
+import ErrorBoundary from './components/ErrorBoundary';
+import { SCHOOL_INFO } from './constants/schoolInfo';
+
 const App: React.FC = () => {
   return (
     <Router>
       <NotificationProvider>
         <AuthProvider>
+
           <div className="flex flex-col min-h-screen bg-white">
-            <Navbar />
+            <ErrorBoundary>
+              <Navbar />
 
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/aluno" element={<StudentArea />} />
-                <Route path="/admin" element={<AdminPanel />} />
-                <Route path="/mural" element={<MuralAlunos />} />
-                <Route path="/auth/callback" element={<AuthCallbackHandler />} />
-              </Routes>
-            </main>
+              <main className="flex-grow">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/aluno" element={<StudentArea />} />
+                  <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/mural" element={<MuralAlunos />} />
+                  <Route path="/auth/callback" element={<AuthCallbackHandler />} />
+                </Routes>
+              </main>
 
-            <Footer />
+              <Footer />
+            </ErrorBoundary>
 
             {/* Floating Elements */}
             <InstagramButton />
             <a
-              href="https://wa.me/5535999999999"
+              href={`https://wa.me/${SCHOOL_INFO.phone}`}
               target="_blank"
               rel="noopener noreferrer"
               className="fixed bottom-6 left-6 z-[100] bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 transition-all hover:scale-110"
@@ -45,6 +51,7 @@ const App: React.FC = () => {
               </svg>
             </a>
           </div>
+
         </AuthProvider>
       </NotificationProvider>
     </Router>

@@ -220,7 +220,7 @@ const StudentCard: React.FC<{ student: StudentProfile }> = ({ student }) => {
             <div className="relative mb-4">
                 <div className="aspect-square rounded-2xl bg-slate-50 overflow-hidden border-2 border-slate-50 flex items-center justify-center">
                     {student.avatar_url ? (
-                        <img src={student.avatar_url} alt={student.full_name || ''} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        <img src={student.avatar_url} alt={student.full_name || ''} className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-700" />
                     ) : (
                         <User className="w-12 h-12 text-slate-200" />
                     )}
