@@ -1,5 +1,17 @@
 # CHANGELOG - Gracie Barra Andradas
 
+## [0.4.1] - 2026-01-20 15:41 BRT
+
+### 🐛 Bug Fixes
+
+- **CRITICAL**: Fixed post-login redirect issue where users remained on home page
+  - Enhanced `LoginModal.tsx` redirect logic with 2-second timeout fallback
+  - Users now properly redirect to `/aluno` (Student Area) or `/admin` (Admin Panel) based on role
+  - Prevents indefinite waiting for profile data to load
+  - Ensures reliable navigation even with slow network or database delays
+
+---
+
 ## [0.3.0] - 2026-01-20 15:13 BRT
 
 ### 🔒 Security & Authentication

@@ -29,13 +29,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     // Handle redirect after successful login/signup AND context update
     React.useEffect(() => {
         if (redirectPending && user) {
-            // We have a user in context, now check if we need to wait for profile
-            // If we are admin, we definitely need profile to confirm role
-            // If StudentArea checks profile, we might want to wait too, but usually user is enough for access
-
-            // Just for safety, let's give a tiny delay or ensure profile is loaded if possible
-            // But relying on 'profile' being non-null might hang if profile fetch fails
-
             const performRedirect = () => {
                 setRedirectPending(false);
                 onClose();
@@ -46,14 +39,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 }
             };
 
-            // If profile is already loaded or we have a user and profile is loading... 
-            // Let's just go. The pages handle their own loading states mostly.
-            // But checking isAdmin requires profile.
+            // If profile is already loaded, redirect immediately
             if (profile) {
                 performRedirect();
             } else {
-                // If profile is stuck, fallback to student after a timeout? 
-                // Or just wait. AuthContext should fetch profile quickly.
+                // If profile hasn't loaded yet, wait up to 2 seconds before defaulting to /aluno
+                const timeoutId = setTimeout(() => {
+                    console.log('⚠️ Profile load timeout - redirecting to /aluno by default');
+                    setRedirectPending(false);
+                    onClose();
+                    navigate('/aluno');
+                }, 2000);
+
+                return () => clearTimeout(timeoutId);
             }
         }
     }, [redirectPending, user, profile, isAdmin, navigate, onClose]);
