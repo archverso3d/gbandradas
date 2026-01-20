@@ -101,7 +101,14 @@ const AdminPanel: React.FC = () => {
         } catch (error: any) {
             console.error('Error updating student:', error);
             const errorMessage = error?.message || error?.details || error?.hint || JSON.stringify(error);
-            notification.alert(`Não foi possível salvar as alterações: ${errorMessage}`, 'Erro ao Salvar');
+            if (error) {
+                console.log('Logging out as profile session might be invalid:', error);
+                await signOut();
+                navigate('/');
+                return;
+            }
+            setIsSaved(true);
+            setTimeout(() => setIsSaved(false), 3000);
         }
     };
 
@@ -209,23 +216,6 @@ const AdminPanel: React.FC = () => {
                         >
                             <Users className="w-4 h-4" />
                             {showSidebar ? 'Ocultar Lista' : 'Lista de Alunos'}
-                        </button>
-
-
-
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await signOut();
-                                    notification.alert('Sessão administrativa encerrada.', 'Até logo!');
-                                } finally {
-                                    navigate('/');
-                                }
-                            }}
-                            className="px-5 py-3 bg-slate-900 text-white hover:bg-black rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-slate-200 flex items-center gap-2"
-                        >
-                            <LogOut className="w-3.5 h-3.5" />
-                            Sair
                         </button>
                     </div>
                 </header>

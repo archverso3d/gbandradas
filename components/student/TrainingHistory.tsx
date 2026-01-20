@@ -12,6 +12,7 @@ interface AttendanceRecord {
 interface TrainingHistoryProps {
     attendanceData: AttendanceRecord[];
     studentStartDate: string;
+    studentCategory?: string;
 }
 
 // Helper to get Year-Week identifier
@@ -25,7 +26,7 @@ const getYearWeek = (dateStr: string) => {
     return `${date.getFullYear()}-${String(weekNumber).padStart(2, '0')}`;
 };
 
-export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData, studentStartDate }) => {
+export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData, studentStartDate, studentCategory }) => {
 
     const stats = useMemo(() => {
         if (!attendanceData) {
@@ -173,18 +174,21 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
                                 return label;
                             };
 
-                            const getStyle = (label: string | undefined) => {
+                            const getStyle = (label: string | undefined, date: string) => {
                                 const l = (label || '').toLowerCase();
+                                const d = new Date(date + 'T12:00:00');
+                                const isFriday = d.getDay() === 5;
+
                                 if (l.includes('aula a') || l === 'a') return 'bg-blue-600 shadow-blue-200';
                                 if (l.includes('aula b') || l === 'b') return 'bg-purple-600 shadow-purple-200';
-                                if (l.includes('no-gi') || l.includes('nogi')) return 'bg-slate-900 shadow-slate-200';
+                                if (l.includes('no-gi') || l.includes('nogi') || (!l && isFriday)) return 'bg-slate-900 shadow-slate-200';
                                 return 'bg-indigo-600 shadow-indigo-200';
                             };
 
                             return (
                                 <div key={record.id} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${getStyle(record.classLabel)}`}>
-                                        <span className="text-[10px] font-black text-white tracking-widest">GB2</span>
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${getStyle(record.classLabel, record.date)}`}>
+                                        <span className="text-[10px] font-black text-white tracking-widest">{studentCategory || 'GB2'}</span>
                                     </div>
                                     <div className="flex-grow">
                                         <div className="text-xs font-black text-slate-800 uppercase tracking-wide group-hover:text-indigo-600 transition-colors">

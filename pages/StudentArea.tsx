@@ -77,12 +77,17 @@ const StudentArea: React.FC = () => {
             }
 
             // Fetch Attendance
-            const { data: attData } = await supabase
+            console.log('📅 Fetching attendance for user:', userId);
+            const { data: attData, error: attError } = await supabase
                 .from('student_attendance')
                 .select('*')
                 .eq('user_id', userId);
 
-            if (attData) {
+            if (attError) {
+                console.error('❌ Attendance fetch error:', attError);
+                notification.alert(`Erro ao carregar presenças: ${attError.message}`, 'Erro');
+            } else if (attData) {
+                console.log(`✅ Fetched ${attData.length} attendance records`);
                 const formattedAtt = attData.map((item: any) => {
                     const date = new Date(item.checkin_at);
                     const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -91,27 +96,35 @@ const StudentArea: React.FC = () => {
                         date: localDateStr,
                         status: item.status,
                         classLabel: item.class_label,
-                        weekNumber: item.week_number
+                        weekNumber: getCurrentCurriculumWeek(date)
                     };
                 });
+                console.log('📊 Formatted attendance:', formattedAtt.length, 'records');
                 setAttendance(formattedAtt);
             }
 
             // Fetch Graduation (History/Details)
-            const { data: gradData } = await supabase
+            console.log('🎓 Fetching graduation data for user:', userId);
+            const { data: gradDataArray, error: gradError } = await supabase
                 .from('student_graduations')
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
+                .limit(1);
 
-            if (gradData) {
+            if (gradError) {
+                console.error('❌ Graduation fetch error:', gradError);
+            } else if (gradDataArray && gradDataArray.length > 0) {
+                const gradData = gradDataArray[0];
+                console.log('✅ Found graduation record:', gradData);
                 setGraduation(prev => ({
                     ...prev,
                     ...gradData,
-                    current_belt: gradData.current_belt || prev?.current_belt || 'Faixa Branca'
+                    current_belt: gradData.current_belt || profile?.current_belt || prev?.current_belt || 'Faixa Branca',
+                    degrees: gradData.degrees ?? profile?.degrees ?? prev?.degrees ?? 0
                 }));
+            } else {
+                console.log('ℹ️ No graduation records found, using profile data');
             }
 
             // Fetch Techniques
@@ -185,7 +198,8 @@ const StudentArea: React.FC = () => {
     const handleLogout = async () => {
         try {
             await signOut();
-            notification.alert('Sessão encerrada com sucesso.', 'Até logo!');
+        } catch (err) {
+            console.error('Logout error:', err);
         } finally {
             navigate('/');
         }
@@ -315,13 +329,6 @@ const StudentArea: React.FC = () => {
                                 Admin
                             </button>
                         )}
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200"
-                        >
-                            <LogOut className="w-3.5 h-3.5" />
-                            Sair
-                        </button>
                     </div>
                 </div>
 
@@ -349,6 +356,7 @@ const StudentArea: React.FC = () => {
                         <TrainingHistory
                             attendanceData={attendance}
                             studentStartDate={graduation?.start_date || '2024-01-01'}
+                            studentCategory={profile?.student_category || 'GB2'}
                         />
 
                         {/* Graduation Card */}

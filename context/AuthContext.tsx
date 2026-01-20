@@ -10,6 +10,7 @@ interface AuthProfile {
     current_belt: string;
     degrees: number;
     start_date: string | null;
+    student_category: string | null;
 }
 
 interface AuthContextType {
@@ -55,96 +56,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const signOut = async () => {
-        /**
-         * SEGURANÇA & BOAS PRÁTICAS:
-         * 1. Backend SignOut: Invalida o token JWT no servidor Supabase.
-         * 2. State Cleanup: Remove o usuário do estado global do React para atualizar a UI instantaneamente.
-         * 3. Storage Cleanup: Remove manualmente chaves do localStorage para evitar persistência indesejada.
-         * 4. Session/Cookie Cleanup: Limpa dados residuais para mitigar sequestro de sessão.
-         */
         try {
-            console.log('AuthContext: Iniciando processo de logout...');
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Erro ao encerrar sessão no Supabase:', error);
-            }
+            console.log('☢️ NUCLEAR LOGOUT INITIATED');
+            await supabase.auth.signOut();
         } catch (error) {
-            console.error('Erro inesperado durante o logout:', error);
+            console.error('Logout error (ignored for cleanup):', error);
         } finally {
-            // Limpa o estado global independente do resultado da requisição de rede
             setUser(null);
             setSession(null);
             setProfile(null);
-
-            try {
-                // Limpeza agressiva do LocalStorage (Supabase usa o prefixo 'sb-')
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token'))) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-
-                // Limpa SessionStorage para evitar vazamento de dados entre abas
-                sessionStorage.clear();
-
-                // Limpeza opcional de cookies residuais (boa prática de segurança)
-                document.cookie.split(";").forEach((c) => {
-                    document.cookie = c
-                        .replace(/^ +/, "")
-                        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                });
-
-                console.log('AuthContext: Estado local e storage limpos com sucesso.');
-            } catch (storageError) {
-                console.error('Erro ao limpar storage durante o logout:', storageError);
-            }
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            console.log('✅ Clean-up completed. Redirecting...');
+            window.location.href = '/';
         }
     };
 
     useEffect(() => {
+        let mounted = true;
+        let timeoutId: NodeJS.Timeout;
+
         const initializeAuth = async () => {
-            // Safety timeout: force loading to false after 5s to prevent infinite spinner
-            const timeoutId = setTimeout(() => setLoading(false), 5000);
+            // CRITICAL: Safety timeout to prevent infinite loading
+            timeoutId = setTimeout(() => {
+                console.warn('⚠️ Auth initialization timeout - forcing loading to false');
+                if (mounted) setLoading(false);
+            }, 5000);
 
             try {
                 setLoading(true);
                 const { data: { session } } = await supabase.auth.getSession();
-                setSession(session);
-                setUser(session?.user ?? null);
 
-                if (session?.user) {
-                    await fetchProfile(session.user.id);
+                if (mounted) {
+                    setSession(session);
+                    setUser(session?.user ?? null);
+
+                    if (session?.user) {
+                        await fetchProfile(session.user.id);
+                    }
                 }
             } catch (error) {
                 console.error("Auth initialization error:", error);
             } finally {
                 clearTimeout(timeoutId);
-                setLoading(false);
+                if (mounted) setLoading(false);
             }
         };
 
         initializeAuth();
 
+        // Auth State Listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
+            if (mounted) {
+                setSession(session);
+                setUser(session?.user ?? null);
 
-            if (session?.user) {
-                await fetchProfile(session.user.id);
-            } else {
-                setProfile(null);
+                if (session?.user) {
+                    await fetchProfile(session.user.id);
+                } else {
+                    setProfile(null);
+                }
+                setLoading(false);
             }
-            // Ensure loading is turned off after auth change
-            setLoading(false);
         });
 
         return () => {
+            mounted = false;
+            clearTimeout(timeoutId);
             subscription.unsubscribe();
         };
     }, []);
+
+    // REAL-TIME PROFILE SYNC
+    useEffect(() => {
+        if (!user) return;
+
+        console.log(`🔌 Subscribing to real-time updates for user: ${user.id}`);
+        const channel = supabase
+            .channel(`public:user_profiles:user_id=eq.${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'user_profiles',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('🔄 Real-time profile update received:', payload);
+                    if (payload.new) {
+                        setProfile(prev => ({ ...prev, ...payload.new } as AuthProfile));
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            console.log('🔌 Unsubscribing from real-time updates');
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id]);
 
     const isAdmin = profile?.role === 'admin';
 

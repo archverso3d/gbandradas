@@ -11,6 +11,7 @@ import MuralAlunos from './pages/MuralAlunos';
 import { AuthCallbackHandler } from './services/authCallbackHandler';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute'; // Import ProtectedRoute
 
 import ErrorBoundary from './components/ErrorBoundary';
 import { SCHOOL_INFO } from './constants/schoolInfo';
@@ -28,9 +29,21 @@ const App: React.FC = () => {
               <main className="flex-grow">
                 <Routes>
                   <Route path="/" element={<Home />} />
-                  <Route path="/aluno" element={<StudentArea />} />
-                  <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="/mural" element={<MuralAlunos />} />
+                  <Route path="/aluno" element={
+                    <ProtectedRoute allowedRoles={['student', 'admin']}>
+                      <StudentArea />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/mural" element={
+                    <ProtectedRoute allowedRoles={['student', 'admin']}>
+                      <MuralAlunos />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/auth/callback" element={<AuthCallbackHandler />} />
                 </Routes>
               </main>

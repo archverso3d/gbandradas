@@ -13,7 +13,7 @@ const Navbar: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, signOut, loading } = useAuth();
   const notification = useNotification();
 
   // Force solid navbar on specific pages
@@ -77,21 +77,22 @@ const Navbar: React.FC = () => {
                 {user ? (
                   <div className="flex items-center gap-2 bg-slate-50/50 p-1 rounded-full border border-slate-100">
                     <button
+                      disabled={loading}
                       onClick={() => navigate(isAdmin ? '/admin' : '/aluno')}
-                      className="px-5 py-2.5 bg-slate-900 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200"
+                      className={`px-5 py-2.5 bg-slate-900 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      Painel
+                      {loading ? '...' : (isAdmin ? 'Admin' : 'Painel')}
                     </button>
                     <button
-                      onClick={async () => {
-                        try {
-                          await signOut();
-                          notification.alert('Sessão encerrada com sucesso.', 'Até logo!');
-                        } finally {
-                          navigate('/');
-                        }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Force immediate logout
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.href = '/';
                       }}
-                      className="px-4 py-2 bg-white text-slate-400 hover:text-red-600 rounded-full font-black uppercase text-[10px] tracking-widest transition-all"
+                      className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-full font-black uppercase text-[10px] tracking-widest transition-all"
                     >
                       Sair
                     </button>
@@ -173,7 +174,8 @@ const Navbar: React.FC = () => {
                       setMobileMenuOpen(false);
                       try {
                         await signOut();
-                        notification.alert('Sessão encerrada com sucesso.', 'Até logo!');
+                      } catch (err) {
+                        console.error('Logout error:', err);
                       } finally {
                         navigate('/');
                       }

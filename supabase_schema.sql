@@ -44,10 +44,12 @@ create table public.saved_techniques (
   title text not null,
   link text not null,
   category text null,
+  category_id uuid null,
   platform text null, -- 'youtube', 'instagram', etc.
   created_at timestamp with time zone not null default now(),
   constraint saved_techniques_pkey primary key (id),
-  constraint saved_techniques_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
+  constraint saved_techniques_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade,
+  constraint saved_techniques_category_id_fkey foreign key (category_id) references technique_groups (id) on delete set null
 );
 
 -- Enable RLS for saved_techniques
@@ -58,6 +60,9 @@ create policy "Users can view their own techniques" on public.saved_techniques
 
 create policy "Users can insert their own techniques" on public.saved_techniques
   for insert with check (auth.uid() = user_id);
+
+create policy "Users can update their own techniques" on public.saved_techniques
+  for update using (auth.uid() = user_id);
 
 create policy "Users can delete their own techniques" on public.saved_techniques
   for delete using (auth.uid() = user_id);

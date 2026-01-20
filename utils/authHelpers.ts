@@ -28,7 +28,9 @@ export const getAuthRedirectUrl = (path: string = 'auth/callback') => {
 
     const finalUrl = `${baseUrl}${cleanPath}`;
 
+    // Log with clear identification of the project being used
     console.log('--- AUTH REDIRECT DEBUG ---');
+    console.log('Project ID (URL prefix):', metaEnv.VITE_SUPABASE_URL?.split('.')[0]?.split('//')[1] || 'Unknown');
     console.log('Detected Origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
     console.log('Final Redirect Target:', finalUrl);
 

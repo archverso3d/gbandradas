@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Storage - GBANDRADAS</title>
+    <style>
+        body {
+            font-family: system-ui;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #b91c1c;
+        }
+        .success {
+            background: #10b981;
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            margin: 10px 0;
+            display: none;
+        }
+        h1 {
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Reset Completo do Sistema</h1>
+        <p>Esta página vai limpar TODOS os dados armazenados no navegador e deslogar você completamente.</p>
+        
+        <button onclick="clearEverything()">LIMPAR TUDO E DESLOGAR</button>
+        <button onclick="window.location.href='/'">Voltar para Home</button>
+        
+        <div class="success" id="success">
+            ✅ Limpeza concluída! Redirecionando...
+        </div>
+    </div>
+
+    <script>
+        function clearEverything() {
+            // 1. Clear all storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // 2. Clear all cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            // 3. Show success
+            document.getElementById('success').style.display = 'block';
+            
+            // 4. Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
