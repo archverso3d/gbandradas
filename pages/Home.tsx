@@ -65,14 +65,16 @@ const Home: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
                         {[
-                            { name: 'Professor Principal', rank: 'Faixa Preta 1º Grau', img: '/professor-chin.png' },
-                            { name: 'Instrutor GB1', rank: 'Faixa Roxa', img: '/instrutor-gabriel.png' }
+                            { role: 'Professor Principal', name: 'Josué "Chin" Tavares', rank: 'Faixa Preta 1º Grau', img: '/professor-chin.png' },
+                            { role: 'Instrutor GB1', name: 'Adriel', rank: 'Faixa Roxa', img: '/instrutor-gabriel.png' },
+                            { role: 'Instrutora GB Kids', name: 'Aline', rank: 'Faixa Azul', img: '/instrutor-aline.png' }
                         ].map((inst, i) => (
                             <div key={i} className="group cursor-pointer">
                                 <div className="aspect-[3/4] overflow-hidden grayscale hover:grayscale-0 transition-all duration-700 mb-6 border border-gray-800 p-2">
                                     <img src={inst.img} alt={inst.name} className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
                                 </div>
-                                <h4 className="text-xl font-bold uppercase tracking-tight">{inst.name}</h4>
+                                <h4 className="text-xl font-bold uppercase tracking-tight">{inst.role}</h4>
+                                <p className="text-gray-300 text-sm font-bold uppercase tracking-wider mt-1">{inst.name}</p>
                                 <p className="text-red-600 text-xs font-black uppercase tracking-widest mt-1">{inst.rank}</p>
                             </div>
                         ))}
