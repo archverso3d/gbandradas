@@ -12,6 +12,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculum';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
+import { UserMural, MuralProfile } from '../components/student/UserMural';
 
 // Types
 interface AttendanceRecord {
@@ -35,7 +36,9 @@ interface Technique {
     title: string;
     link: string;
     category: string;
+    category_id?: string;
     platform: 'youtube' | 'instagram' | 'other';
+    created_at?: string;
 }
 
 const StudentArea: React.FC = () => {
@@ -47,6 +50,7 @@ const StudentArea: React.FC = () => {
     const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
     const [graduation, setGraduation] = useState<Graduation | null>(null);
     const [techniques, setTechniques] = useState<Technique[]>([]);
+    const [selectedMuralUser, setSelectedMuralUser] = useState<MuralProfile | null>(null);
     const [currentWeek, setCurrentWeek] = useState<number>(getCurrentCurriculumWeek());
     const [showBackToTop, setShowBackToTop] = useState(false);
     const notification = useNotification();
@@ -140,20 +144,36 @@ const StudentArea: React.FC = () => {
             }
 
             // Fetch Techniques
-            const { data: techData } = await supabase
-                .from('saved_techniques')
-                .select('*')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false });
-
-            if (techData) {
-                setTechniques(techData as Technique[]);
-            }
+            await fetchTechniques(userId);
 
         } catch (error) {
             console.error('Error fetching student data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchTechniques = async (userId: string) => {
+        const { data: techData, error } = await supabase
+            .from('saved_techniques')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (techData) {
+            setTechniques(techData as Technique[]);
+        } else if (error) {
+            console.error('Error fetching techniques:', error);
+        }
+    };
+
+    const handleSelectUser = (userId: string, profile: MuralProfile) => {
+        if (userId === user?.id) {
+            setSelectedMuralUser(null);
+            fetchTechniques(user.id);
+        } else {
+            setSelectedMuralUser(profile);
+            fetchTechniques(userId);
         }
     };
 
@@ -304,6 +324,12 @@ const StudentArea: React.FC = () => {
                     />
                 </div>
 
+                <UserMural
+                    currentUserId={user?.id || ''}
+                    onSelectUser={handleSelectUser}
+                    selectedUserId={selectedMuralUser?.user_id || user?.id || ''}
+                />
+
                 {/* Header */}
                 <div className="bg-white shadow-sm rounded-2xl p-3 sm:p-6 mb-8 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
@@ -402,6 +428,8 @@ const StudentArea: React.FC = () => {
                             onAddTechnique={handleAddTechnique}
                             onUpdateTechnique={handleUpdateTechnique}
                             onDeleteTechnique={handleDeleteTechnique}
+                            readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
+                            title={selectedMuralUser ? `Técnicas de ${selectedMuralUser.full_name?.split(' ')[0]}` : "Minhas Técnicas"}
                         />
                     </div>
                 </div>

@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
           <p>&copy; 2024 Gracie Barra Andradas. Todos os direitos reservados.</p>
           <div className="flex flex-col items-center md:items-end gap-2 mt-4 md:mt-0">
             <p>Desenvolvido com excelência GB</p>
-            <p className="text-[10px] text-gray-600 font-medium lowercase italic">v0.5.0 - 20/01/2026 - 17:56</p>
+            <p className="text-[10px] text-gray-600 font-medium lowercase italic">v0.6.0 - 23/01/2026 - 10:49</p>
           </div>
         </div>
       </div>

@@ -135,7 +135,7 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
             {/* Stats Header (Extra Compact) */}
             <div className="flex flex-col gap-0.5">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Frequência</h3>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sua Frequência</h3>
                     <span className="text-[12px] font-black text-slate-900 italic">{totalClassesInMonth} Aulas</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-50 rounded-full overflow-hidden">

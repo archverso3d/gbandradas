@@ -84,9 +84,9 @@ create table public.user_profiles (
 alter table public.user_profiles enable row level security;
 
 -- Policies
-create policy "Users can view their own profile" 
+create policy "Users can view all profiles" 
   on public.user_profiles for select 
-  using (auth.uid() = user_id);
+  using (true);
 
 create policy "Users can update their own profile" 
   on public.user_profiles for update 

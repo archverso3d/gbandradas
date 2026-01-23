@@ -24,6 +24,8 @@ interface TechniqueVaultProps {
     onAddTechnique: (technique: Omit<Technique, 'id' | 'created_at'>) => void;
     onUpdateTechnique: (id: string, technique: Partial<Technique> & { category_id?: string }) => void;
     onDeleteTechnique: (id: string) => void;
+    readOnly?: boolean;
+    title?: string;
 }
 
 const CATEGORY_COLORS = [
@@ -37,7 +39,7 @@ const CATEGORY_COLORS = [
     { name: 'Slate', bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-600', fill: 'bg-slate-600' },
 ];
 
-export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAddTechnique, onUpdateTechnique, onDeleteTechnique }) => {
+export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAddTechnique, onUpdateTechnique, onDeleteTechnique, readOnly = false, title = "Minhas Técnicas" }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [isManagingCategories, setIsManagingCategories] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -56,11 +58,15 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
     const notification = useNotification();
 
     const DEFAULT_CATEGORIES = [
-        { id: 'default-queda', name: 'QUEDA', color: 'Red' },
+        { id: 'default-queda', name: 'QUEDAS', color: 'Red' },
         { id: 'default-raspagem', name: 'RASPAGEM', color: 'Purple' },
         { id: 'default-passagem', name: 'PASSAGEM DE GUARDA', color: 'Green' },
         { id: 'default-finalizacao', name: 'FINALIZAÇÃO', color: 'Amber' },
-        { id: 'default-defesa', name: 'DEFESA', color: 'Slate' },
+        { id: 'default-100kg', name: '100KG', color: 'Slate' },
+        { id: 'default-americana', name: 'AMERICANA', color: 'Pink' },
+        { id: 'default-armlock', name: 'ARMLOCK', color: 'Blue' },
+        { id: 'default-choke', name: 'CHOKE', color: 'Indigo' },
+        { id: 'default-estrangulamento', name: 'ESTRANGULAMENTO', color: 'Indigo' },
     ];
 
     useEffect(() => {
@@ -105,7 +111,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
 
         const { data, error } = await supabase
             .rpc('add_technique_category', {
-                p_name: newCategoryName,
+                p_name: newCategoryName.toUpperCase(),
                 p_color: newCategoryColor
             });
 
@@ -138,7 +144,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
 
         const { error } = await supabase
             .from('technique_groups')
-            .update({ name: newCategoryName, color: newCategoryColor })
+            .update({ name: newCategoryName.toUpperCase(), color: newCategoryColor })
             .eq('id', editingCategory.id);
 
         if (!error) {
@@ -194,7 +200,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
             return;
         }
         setEditingCategory(category);
-        setNewCategoryName(category.name);
+        setNewCategoryName(category.name.toUpperCase());
         setNewCategoryColor(category.color);
         setIsManagingCategories(true); // Open panel to edit
     };
@@ -269,6 +275,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
 
         setNewTitle('');
         setNewLink('');
+        setNewCategoryId('');
         setIsAdding(false);
     };
 
@@ -321,10 +328,15 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                 const legacyMap: Record<string, string> = {
                     'jiu-jitsu': 'Blue',
                     'queda': 'Red',
+                    'quedas': 'Red',
                     'raspagem': 'Purple',
                     'passagem de guarda': 'Green',
                     'finalização': 'Amber',
-                    'defesa': 'Slate'
+                    '100kg': 'Slate',
+                    'americana': 'Pink',
+                    'armlock': 'Blue',
+                    'choke': 'Indigo',
+                    'estrangulamento': 'Indigo'
                 };
                 colorName = legacyMap[categoryName.toLowerCase()] || 'Slate';
             }
@@ -349,8 +361,11 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
 
         const groups: Record<string, Technique[]> = {};
 
-        techniques.forEach(tech => { // Use 'techniques' directly here, as 'filteredTechniques' would be all techniques if selectedFilter is 'Todos'
-            const catName = tech.category || 'Outros';
+        techniques.forEach(tech => {
+            let catName = tech.category || 'Outros';
+            // Normalize categories
+            if (catName.toUpperCase() === 'QUEDA') catName = 'QUEDAS';
+
             if (!groups[catName]) groups[catName] = [];
             groups[catName].push(tech);
         });
@@ -379,26 +394,30 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <Video className="w-5 h-5 text-gray-900" />
-                    Minhas Técnicas
+                    {title}
                 </h2>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => {
-                            setIsManagingCategories(!isManagingCategories);
-                            setEditingCategory(null);
-                            setNewCategoryName('');
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${isManagingCategories ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                        title={isManagingCategories ? "Sair da Edição" : "Gerenciar Categorias"}
-                    >
-                        {isManagingCategories ? <Check className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-                    </button>
-                    <button
-                        onClick={() => setIsAdding(!isAdding)}
-                        className={`p-2 rounded-lg transition-colors ${isAdding ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                    >
-                        {isAdding ? <XCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                    </button>
+                    {!readOnly && (
+                        <button
+                            onClick={() => {
+                                setIsManagingCategories(!isManagingCategories);
+                                setEditingCategory(null);
+                                setNewCategoryName('');
+                            }}
+                            className={`p-2 rounded-lg transition-colors ${isManagingCategories ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                            title={isManagingCategories ? "Sair da Edição" : "Gerenciar Categorias"}
+                        >
+                            {isManagingCategories ? <Check className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+                        </button>
+                    )}
+                    {!readOnly && (
+                        <button
+                            onClick={() => setIsAdding(!isAdding)}
+                            className={`p-2 rounded-lg transition-colors ${isAdding ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        >
+                            {isAdding ? <XCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -420,7 +439,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                         <input
                             type="text"
                             value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            onChange={(e) => setNewCategoryName(e.target.value.toUpperCase())}
                             placeholder="Nome da categoria..."
                             className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-red-500 outline-none"
                         />
@@ -585,13 +604,15 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                 })}
 
                 {/* Additional Add Button in Filters */}
-                <button
-                    onClick={() => { setIsManagingCategories(true); setEditingCategory(null); setNewCategoryName(''); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all font-bold"
-                    title="Adicionar Nova Categoria"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                {!readOnly && (
+                    <button
+                        onClick={() => { setIsManagingCategories(true); setEditingCategory(null); setNewCategoryName(''); }}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all font-bold"
+                        title="Adicionar Nova Categoria"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                )}
             </div>
 
 
@@ -729,22 +750,24 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                                                 <div className={`p-3 rounded-2xl ${style.bg} ${style.text} group-hover:scale-110 transition-transform duration-500`}>
                                                                     {getPlatformIcon(tech.platform)}
                                                                 </div>
-                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                                    <button
-                                                                        onClick={() => startEditingTechnique(tech)}
-                                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                                        title="Editar Técnica"
-                                                                    >
-                                                                        <Edit2 className="w-4 h-4" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => onDeleteTechnique(tech.id)}
-                                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                                        title="Excluir Técnica"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
-                                                                </div>
+                                                                {!readOnly && (
+                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                        <button
+                                                                            onClick={() => startEditingTechnique(tech)}
+                                                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                            title="Editar Técnica"
+                                                                        >
+                                                                            <Edit2 className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => onDeleteTechnique(tech.id)}
+                                                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                            title="Excluir Técnica"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
 
                                                             <h3 className="font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 mb-2 pr-6">
