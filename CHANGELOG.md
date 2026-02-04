@@ -1,6 +1,14 @@
 # CHANGELOG - Gracie Barra Andradas
 
-## [0.5.0] - 2026-01-20 17:56 BRT
+## [0.7.0] - 2026-02-03 22:32 BRT
+
+### 🚀 Deployment & Updates
+
+- **Version 0.7.0 Release**
+- Full deployment update
+- Updated version, date, and time metadata
+
+---
 
 ### 🚀 Deployment & Updates
 

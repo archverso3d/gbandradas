@@ -99,7 +99,7 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
     }).map(a => a.date)).size;
 
     const handleDayClick = (day: number) => {
-        if (!isAdmin) return;
+        if (readOnly) return;
 
         const record = getStatusForDay(day);
 
@@ -131,96 +131,64 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
     };
 
     return (
-        <div ref={calendarRef} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3.5 relative overflow-visible transition-all flex flex-col gap-3 w-full">
+        <div ref={calendarRef} className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-xl border-x-4 border-t-4 border-b-[8px] border-slate-100 dark:border-slate-800 p-6 relative overflow-visible transition-all flex flex-col gap-6 w-full">
             {/* Stats Header (Extra Compact) */}
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sua Frequência</h3>
-                    <span className="text-[12px] font-black text-slate-900 italic">{totalClassesInMonth} Aulas</span>
+                    <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Sua Frequência</h3>
+                    <span className="text-sm font-black text-slate-900 dark:text-slate-100 italic">{totalClassesInMonth} Aulas</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 w-[15%] transition-all duration-1000"></div>
+                <div className="w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border-b-2 border-slate-200 dark:border-slate-950">
+                    <div className="h-full bg-orange-500 w-[15%] transition-all duration-1000 shadow-[0_0_12px_rgba(249,115,22,0.5)] rounded-full"></div>
                 </div>
             </div>
 
-            {/* Attendance Buttons (Smaller UI) - Only show for students or generic usage, Admin uses direct click now */}
-            {!readOnly && !isAdmin && (
-                <div className="flex flex-col gap-1.5">
-                    <button
-                        onClick={onMarkToday}
-                        disabled={isTodayMarked}
-                        className={`
-                            flex items-center justify-center gap-1.5 py-2 rounded-xl font-black uppercase tracking-wider italic text-[9px] transition-all
-                            ${isTodayMarked
-                                ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10 active:scale-[0.98]'
-                            }
-                        `}
-                    >
-                        <CheckCircle2 className="w-3 h-3" />
-                        {isTodayMarked ? 'TREINO CONCLUÍDO' : 'CONCLUIR HOJE'}
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-1.5">
-                        <button
-                            onClick={() => {
-                                const date = prompt('Data (AAAA-MM-DD):', todayStr);
-                                if (date && onMarkPast) onMarkPast(date);
-                            }}
-                            className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-white border border-slate-100 hover:bg-slate-50 text-slate-400 font-bold uppercase tracking-tighter text-[8px] transition-all"
-                        >
-                            <Plus className="w-2 h-2" />
-                            Antigo
-                        </button>
-                        <button
-                            onClick={onClear}
-                            className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-white border border-slate-100 hover:bg-slate-50 text-slate-400 font-bold uppercase tracking-tighter text-[8px] transition-all"
-                        >
-                            <Clock className="w-2 h-2" />
-                            Limpar
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {/* Calendar Container (Tight Grid) */}
-            <div className="bg-slate-50/30 rounded-xl p-2.5 border border-slate-100/50 relative">
+            <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.5rem] p-5 border-x-2 border-t-2 border-b-4 border-slate-100 dark:border-slate-800 relative transition-colors shadow-inner">
                 {/* Header */}
-                <div className="flex flex-col gap-2 mb-2">
+                <div className="flex flex-col gap-4 mb-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                            <button onClick={prevMonth} className="p-0.5 hover:bg-white hover:shadow-sm rounded-md text-slate-400 transition-all">
-                                <ChevronLeft className="w-3 h-3" />
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={prevMonth}
+                                className="p-2 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 border-b-4 border-slate-200 dark:border-slate-900 active:border-b-0 active:translate-y-1 rounded-xl text-slate-400 dark:text-slate-300 transition-all font-black"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
                             </button>
-                            <h2 className="text-[9px] font-black text-slate-800 uppercase tracking-widest italic">
+                            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider italic">
                                 {monthNames[currentMonth]} {currentYear}
                             </h2>
-                            <button onClick={nextMonth} className="p-0.5 hover:bg-white hover:shadow-sm rounded-md text-slate-400 transition-all">
-                                <ChevronRight className="w-3 h-3" />
+                            <button
+                                onClick={nextMonth}
+                                className="p-2 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 border-b-4 border-slate-200 dark:border-slate-900 active:border-b-0 active:translate-y-1 rounded-xl text-slate-400 dark:text-slate-300 transition-all font-black"
+                            >
+                                <ChevronRight className="w-5 h-5" />
                             </button>
                         </div>
-                        <CalendarIcon className="w-2.5 h-2.5 text-slate-300" />
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                            <CalendarIcon className="w-5 h-5 text-slate-400" />
+                        </div>
                     </div>
 
                     {/* Weekly Schedule Info (Only Show if NOT Admin, i.e. User Portal) */}
                     {!isAdmin && currentWeek && (
-                        <div className="bg-white rounded-lg p-2 border border-slate-100 shadow-sm flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between border-b border-slate-50 pb-1">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Currículo</span>
-                                <span className="text-[9px] font-black text-blue-600 uppercase italic">Semana {currentWeek}</span>
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-x-2 border-t-2 border-b-4 border-slate-100 dark:border-slate-700 shadow-sm flex flex-col gap-3 transition-colors">
+                            <div className="flex items-center justify-between border-b-2 border-slate-50 dark:border-slate-700 pb-2">
+                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Currículo</span>
+                                <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase italic bg-blue-50 dark:bg-blue-900/40 px-3 py-1 rounded-full">Semana {currentWeek}</span>
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-3 h-3 rounded bg-blue-50 text-blue-600 flex items-center justify-center text-[7px] font-bold">A</div>
-                                    <span className="text-[7px] font-bold text-slate-500 uppercase tracking-tight">Segunda e Terça</span>
+                            <div className="flex flex-col gap-2.5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-black border-b-2 border-blue-800 shadow-sm">A</div>
+                                    <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Segunda e Terça</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-3 h-3 rounded bg-purple-50 text-purple-600 flex items-center justify-center text-[7px] font-bold">B</div>
-                                    <span className="text-[7px] font-bold text-slate-500 uppercase tracking-tight">Quarta e Quinta</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center text-[10px] font-black border-b-2 border-purple-800 shadow-sm">B</div>
+                                    <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Quarta e Quinta</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-3 h-3 rounded bg-slate-100 text-slate-600 flex items-center justify-center text-[7px] font-bold">N</div>
-                                    <span className="text-[7px] font-bold text-slate-500 uppercase tracking-tight">Sexta (No-Gi/Defesa)</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center text-[10px] font-black border-b-2 border-red-800 shadow-sm">N</div>
+                                    <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Sexta (No-Gi/Defesa)</span>
                                 </div>
                             </div>
                         </div>
@@ -228,16 +196,16 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
                 </div>
 
                 {/* Week Headers */}
-                <div className="grid grid-cols-7 gap-0.5 mb-1">
+                <div className="grid grid-cols-7 gap-1 mb-2">
                     {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => (
-                        <div key={i} className="text-center text-[7px] font-black text-slate-300 uppercase">
+                        <div key={i} className="text-center text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                             {day}
                         </div>
                     ))}
                 </div>
 
                 {/* Days Grid (Even more compact) */}
-                <div className="grid grid-cols-7 gap-0.5">
+                <div className="grid grid-cols-7 gap-2">
                     {blanks.map((_, i) => (
                         <div key={`blank-${i}`} className="aspect-square"></div>
                     ))}
@@ -250,23 +218,36 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
 
                         let bgClass = '';
                         let textClass = '';
+                        let borderClass = '';
 
                         if (isPresent) {
                             textClass = 'text-white';
-                            if (record.classLabel === 'A') bgClass = 'bg-blue-600 shadow-blue-200';
-                            else if (record.classLabel === 'B') bgClass = 'bg-purple-600 shadow-purple-200';
-                            else if (record.classLabel === 'C') bgClass = 'bg-pink-600 shadow-pink-200';
-                            else if (record.classLabel === 'N') bgClass = 'bg-slate-800 shadow-slate-400';
-                            else bgClass = 'bg-orange-500 shadow-orange-200'; // Default / Fallback
-                        } else if (isToday) {
-                            // Current Day Cursor
-                            bgClass = '';
-                            textClass = 'text-blue-600 font-extrabold';
+                            if (record.classLabel === 'A') {
+                                bgClass = 'bg-blue-600';
+                                borderClass = 'border-b-4 border-blue-800 shadow-lg shadow-blue-500/20';
+                            }
+                            else if (record.classLabel === 'B') {
+                                bgClass = 'bg-purple-600';
+                                borderClass = 'border-b-4 border-purple-800 shadow-lg shadow-purple-500/20';
+                            }
+                            else if (record.classLabel === 'N') {
+                                bgClass = 'bg-red-600';
+                                borderClass = 'border-b-4 border-red-800 shadow-lg shadow-red-500/20';
+                            }
+                            else {
+                                bgClass = 'bg-orange-500';
+                                borderClass = 'border-b-4 border-orange-700 shadow-lg shadow-orange-500/20';
+                            }
                         } else if (isPending) {
-                            bgClass = 'bg-emerald-500 shadow-emerald-200';
+                            bgClass = 'bg-emerald-500';
                             textClass = 'text-white';
+                            borderClass = 'border-b-4 border-emerald-700 shadow-lg shadow-emerald-500/20';
+                        } else if (isToday) {
+                            bgClass = 'bg-white dark:bg-slate-800';
+                            textClass = 'text-blue-600 dark:text-blue-400 font-black';
+                            borderClass = 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900 rounded-2xl';
                         } else {
-                            textClass = 'text-slate-400 hover:text-slate-600 hover:bg-slate-50';
+                            textClass = 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-2xl transition-all';
                         }
 
                         return (
@@ -274,13 +255,13 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
                                 key={`day-${day}`}
                                 disabled={!isAdmin && readOnly}
                                 onClick={() => handleDayClick(day)}
-                                className="aspect-square flex items-center justify-center relative group disabled:cursor-default"
+                                className={`aspect-square flex items-center justify-center relative group disabled:cursor-default transition-all active:scale-95`}
                             >
                                 <div
                                     className={`
-                                        w-7 h-7 flex items-center justify-center rounded-full text-[10px] font-bold transition-all relative shadow-sm
-                                        ${bgClass} ${textClass}
-                                        ${isToday && !isPresent ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+                                        w-10 h-10 flex items-center justify-center rounded-2xl text-sm font-black transition-all relative
+                                        ${bgClass} ${textClass} ${borderClass}
+                                        ${!isPresent && !isPending && !isToday ? '' : ''}
                                     `}
                                 >
                                     {day}
@@ -288,26 +269,26 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
 
                                 {/* Confirmation Balloon for ADD */}
                                 {isPending && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 animate-in fade-in zoom-in duration-200">
-                                        <div className="bg-slate-900 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-xl flex items-center gap-2 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-slate-900">
-                                            <span className="font-bold">Confirmar?</span>
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in zoom-in duration-200">
+                                        <div className="bg-slate-900 dark:bg-slate-800 text-white text-[11px] py-2 px-4 rounded-xl shadow-2xl border-b-4 border-slate-950 flex items-center gap-3 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-slate-900 dark:after:border-t-slate-800">
+                                            <span className="font-black italic">CONFIRMAR?</span>
                                             <div
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     confirmAddAttendance();
                                                 }}
-                                                className="bg-emerald-500 p-0.5 rounded-full hover:bg-emerald-400 cursor-pointer"
+                                                className="bg-emerald-500 p-1 rounded-full hover:bg-emerald-400 border-b-2 border-emerald-700 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
                                             >
-                                                <CheckCircle2 className="w-3 h-3 text-white" />
+                                                <CheckCircle2 className="w-4 h-4 text-white" />
                                             </div>
                                             <div
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setPendingDate(null);
                                                 }}
-                                                className="bg-slate-700 p-0.5 rounded-full hover:bg-slate-600 cursor-pointer"
+                                                className="bg-slate-700 p-1 rounded-full hover:bg-slate-600 border-b-2 border-slate-900 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
                                             >
-                                                <X className="w-3 h-3 text-white" />
+                                                <X className="w-4 h-4 text-white" />
                                             </div>
                                         </div>
                                     </div>
@@ -315,26 +296,26 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
 
                                 {/* Confirmation Balloon for DELETE */}
                                 {record && pendingDeleteDate === record.id && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 animate-in fade-in zoom-in duration-200">
-                                        <div className="bg-red-600 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-xl flex items-center gap-2 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-red-600">
-                                            <span className="font-bold">Excluir?</span>
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in zoom-in duration-200">
+                                        <div className="bg-red-600 text-white text-[11px] py-2 px-4 rounded-xl shadow-2xl border-b-4 border-red-800 flex items-center gap-3 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-red-600">
+                                            <span className="font-black italic text-xs">EXCLUIR TREINO?</span>
                                             <div
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     confirmDeleteAttendance();
                                                 }}
-                                                className="bg-white p-0.5 rounded-full hover:bg-red-50 cursor-pointer"
+                                                className="bg-white p-1 rounded-full hover:bg-red-50 border-b-2 border-red-200 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
                                             >
-                                                <CheckCircle2 className="w-3 h-3 text-red-600" />
+                                                <Trash2 className="w-4 h-4 text-red-600" />
                                             </div>
                                             <div
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setPendingDeleteDate(null);
                                                 }}
-                                                className="bg-red-800 p-0.5 rounded-full hover:bg-red-700 cursor-pointer"
+                                                className="bg-red-800 p-1 rounded-full hover:bg-red-700 border-b-2 border-red-950 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
                                             >
-                                                <X className="w-3 h-3 text-white" />
+                                                <X className="w-4 h-4 text-white" />
                                             </div>
                                         </div>
                                     </div>
@@ -345,20 +326,39 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
                 </div>
             </div>
 
-            {/* Legend / Info (Tiny) */}
-            {/* Legend / Info (Tiny) */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-4 px-2">
-                <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-blue-600 shadow-sm shadow-blue-200"></div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Aula A</span>
+            {/* Attendance Buttons (Smaller UI) - Moved to bottom and redesigned */}
+            {!readOnly && !isAdmin && (
+                <div className="flex flex-col gap-3">
+                    <button
+                        onClick={onMarkToday}
+                        disabled={isTodayMarked}
+                        className={`
+                            flex items-center justify-center gap-3 py-4 rounded-[1.25rem] font-black uppercase tracking-[0.15em] italic text-sm transition-all shadow-lg
+                            ${isTodayMarked
+                                ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 cursor-not-allowed border-x-2 border-t-2 border-b-4 border-slate-100 dark:border-slate-800 shadow-none'
+                                : 'bg-emerald-500 hover:bg-emerald-400 text-white border-b-[6px] border-emerald-700 active:border-b-0 active:translate-y-1.5 shadow-emerald-500/20'
+                            }
+                        `}
+                    >
+                        <CheckCircle2 className="w-5 h-5" />
+                        {isTodayMarked ? 'TREINO CONCLUÍDO' : 'CONCLUIR HOJE'}
+                    </button>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-purple-600 shadow-sm shadow-purple-200"></div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Aula B</span>
+            )}
+
+            {/* Legend / Info (Tiny) */}
+            <div className="flex flex-wrap items-center justify-center gap-5 mt-2 px-2">
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-lg bg-blue-600 border-b-2 border-blue-800 shadow-sm"></div>
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Aula A</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-slate-800 shadow-sm shadow-slate-400"></div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No-Gi</span>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-lg bg-purple-600 border-b-2 border-purple-800 shadow-sm"></div>
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Aula B</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-lg bg-red-600 border-b-2 border-red-800 shadow-sm"></div>
+                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">No-Gi</span>
                 </div>
             </div>
         </div>

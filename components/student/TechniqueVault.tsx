@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown } from 'lucide-react';
+import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { useNotification } from '../../context/NotificationContext';
+import { curriculumData } from '../../constants/curriculumData';
+import { getCurrentCurriculumWeek } from '../../utils/curriculum';
 
 interface Category {
     id: string;
@@ -26,6 +28,7 @@ interface TechniqueVaultProps {
     onDeleteTechnique: (id: string) => void;
     readOnly?: boolean;
     title?: string;
+    currentWeek?: number;
 }
 
 const CATEGORY_COLORS = [
@@ -39,7 +42,15 @@ const CATEGORY_COLORS = [
     { name: 'Slate', bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-600', fill: 'bg-slate-600' },
 ];
 
-export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAddTechnique, onUpdateTechnique, onDeleteTechnique, readOnly = false, title = "Minhas Técnicas" }) => {
+export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
+    techniques,
+    onAddTechnique,
+    onUpdateTechnique,
+    onDeleteTechnique,
+    readOnly = false,
+    title = "Minhas Técnicas",
+    currentWeek: propWeek
+}) => {
     const [isAdding, setIsAdding] = useState(false);
     const [isManagingCategories, setIsManagingCategories] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -55,7 +66,36 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [editingTechnique, setEditingTechnique] = useState<Technique | null>(null);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showCategoryOnboarding, setShowCategoryOnboarding] = useState(false);
     const notification = useNotification();
+    const currentWeekNum = propWeek || getCurrentCurriculumWeek();
+
+    useEffect(() => {
+        const hasSeenOnboarding = localStorage.getItem('technique_vault_onboarding_done');
+        // Show add-tech onboarding if empty
+        if (!hasSeenOnboarding && techniques.length === 0) {
+            setTimeout(() => setShowOnboarding(true), 1200);
+        }
+
+        // Show category onboarding if they open settings and haven't seen it
+        const hasSeenCatOnboarding = localStorage.getItem('technique_vault_cat_onboarding_done');
+        if (!hasSeenCatOnboarding && isManagingCategories) {
+            setShowCategoryOnboarding(true);
+        } else if (!isManagingCategories) {
+            setShowCategoryOnboarding(false);
+        }
+    }, [techniques.length, isManagingCategories]);
+
+    const dismissOnboarding = () => {
+        setShowOnboarding(false);
+        localStorage.setItem('technique_vault_onboarding_done', 'true');
+    };
+
+    const dismissCategoryOnboarding = () => {
+        setShowCategoryOnboarding(false);
+        localStorage.setItem('technique_vault_cat_onboarding_done', 'true');
+    };
 
     const DEFAULT_CATEGORIES = [
         { id: 'default-queda', name: 'QUEDAS', color: 'Red' },
@@ -65,8 +105,14 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
         { id: 'default-100kg', name: '100KG', color: 'Slate' },
         { id: 'default-americana', name: 'AMERICANA', color: 'Pink' },
         { id: 'default-armlock', name: 'ARMLOCK', color: 'Blue' },
+        { id: 'default-berimbolo', name: 'BERIMBOLO', color: 'Purple' },
         { id: 'default-choke', name: 'CHOKE', color: 'Indigo' },
+        { id: 'default-pegada', name: 'EST. PEGADA', color: 'Amber' },
         { id: 'default-estrangulamento', name: 'ESTRANGULAMENTO', color: 'Indigo' },
+        { id: 'default-montada', name: 'MONTADA', color: 'Green' },
+        { id: 'default-movimentacao', name: 'MOVIMENTAÇÃO', color: 'Purple' },
+        { id: 'default-omoplata', name: 'OMOPLATA', color: 'Slate' },
+        { id: 'default-triangulo', name: 'TRIANGULO', color: 'Blue' },
     ];
 
     useEffect(() => {
@@ -266,7 +312,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
         const finalCatId = (!newCategoryId || newCategoryId.startsWith('default-')) ? null : newCategoryId;
 
         onAddTechnique({
-            title: newTitle,
+            title: newTitle.toUpperCase(),
             link: newLink,
             category: categoryName,
             category_id: finalCatId,
@@ -291,7 +337,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
         const finalCatId = (!newCategoryId || newCategoryId.startsWith('default-')) ? null : newCategoryId;
 
         onUpdateTechnique(editingTechnique.id, {
-            title: newTitle,
+            title: newTitle.toUpperCase(),
             link: newLink,
             category: categoryName,
             category_id: finalCatId,
@@ -306,7 +352,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
 
     const startEditingTechnique = (tech: Technique) => {
         setEditingTechnique(tech);
-        setNewTitle(tech.title);
+        setNewTitle(tech.title.toUpperCase());
         setNewLink(tech.link);
         setNewCategoryId(tech.category_id || (categories.find(c => c.name === tech.category)?.id) || '');
     };
@@ -390,13 +436,15 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
     }, [techniques, categories, selectedFilter]);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <Video className="w-5 h-5 text-gray-900" />
+        <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 p-5 sm:p-6 transition-all hover:shadow-2xl relative group">
+            <div className="flex items-center justify-between mb-5 px-1 relative z-10">
+                <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
                     {title}
                 </h2>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 mr-2">
+                        <Video className="w-4 h-4 text-blue-600 dark:text-blue-500" />
+                    </div>
                     {!readOnly && (
                         <button
                             onClick={() => {
@@ -404,18 +452,44 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                 setEditingCategory(null);
                                 setNewCategoryName('');
                             }}
-                            className={`p-2 rounded-lg transition-colors ${isManagingCategories ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                            className={`p-2.5 rounded-xl transition-all duo-btn-3d ${isManagingCategories ? 'bg-red-600 text-white shadow-[0_4px_0_0_#991b1b]' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]'}`}
                             title={isManagingCategories ? "Sair da Edição" : "Gerenciar Categorias"}
                         >
                             {isManagingCategories ? <Check className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+
+                            {/* Onboarding Balloon - Manage Categories (Pointer is top-right) */}
+                            {showOnboarding && !isManagingCategories && (
+                                <div className="absolute top-[calc(100%+12px)] right-0 w-48 bg-blue-600 text-white p-3.5 rounded-2xl shadow-2xl z-[150] animate-bounce-subtle pointer-events-auto border-2 border-white/20">
+                                    <div className="absolute -top-2 right-[14px] w-4 h-4 bg-blue-600 rotate-45 border-l-2 border-t-2 border-white/20"></div>
+                                    <p className="text-[10px] font-black uppercase tracking-wider leading-relaxed">
+                                        GERENCIE SUAS CATEGORIAS AQUI! VOCÊ PODE CRIAR, EDITAR OU EXCLUIR GRUPOS TÉCNICOS.
+                                    </p>
+                                </div>
+                            )}
                         </button>
                     )}
                     {!readOnly && (
                         <button
                             onClick={() => setIsAdding(!isAdding)}
-                            className={`p-2 rounded-lg transition-colors ${isAdding ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                            className={`p-2.5 rounded-xl transition-all duo-btn-3d ${isAdding ? 'bg-slate-100 text-slate-900 shadow-[0_4px_0_0_#cbd5e1]' : 'bg-blue-600 text-white shadow-[0_4px_0_0_#1d4ed8]'}`}
                         >
                             {isAdding ? <XCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+
+                            {/* Onboarding Balloon - Add Technique (Pointer is top-right) */}
+                            {showOnboarding && !isAdding && (
+                                <div className="absolute top-[calc(100%+12px)] right-0 w-48 bg-orange-500 text-white p-3.5 rounded-2xl shadow-2xl z-[150] animate-bounce-subtle pointer-events-auto border-2 border-white/20">
+                                    <div className="absolute -top-2 right-[14px] w-4 h-4 bg-orange-500 rotate-45 border-l-2 border-t-2 border-white/20"></div>
+                                    <p className="text-[10px] font-black uppercase tracking-wider leading-relaxed mb-3">
+                                        CLIQUE AQUI PARA ADICIONAR SUA PRIMEIRA TÉCNICA DO INSTAGRAM OU YOUTUBE!
+                                    </p>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); dismissOnboarding(); }}
+                                        className="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all"
+                                    >
+                                        ENTENDI!
+                                    </button>
+                                </div>
+                            )}
                         </button>
                     )}
                 </div>
@@ -423,45 +497,47 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
 
             {/* Category Management / Edit Panel */}
             {isManagingCategories && (
-                <div className="mb-8 p-4 bg-red-50/30 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-red-800 flex items-center gap-2">
-                            <Palette className="w-4 h-4" /> {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+                <div className="mb-10 p-5 bg-slate-100 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-4 relative z-10 shadow-inner">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-orange-500" /> {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
                         </h3>
                         {editingCategory && (
-                            <button onClick={() => { setEditingCategory(null); setNewCategoryName(''); }} className="text-xs text-red-600 hover:underline">
+                            <button onClick={() => { setEditingCategory(null); setNewCategoryName(''); }} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-red-500 transition-colors">
                                 Cancelar Edição
                             </button>
                         )}
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex flex-col md:flex-row gap-4">
                         <input
                             type="text"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value.toUpperCase())}
                             placeholder="Nome da categoria..."
-                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                            className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-bold uppercase tracking-widest italic outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600"
                         />
-                        <div className="flex flex-wrap gap-1.5 items-center px-2">
+                        <div className="flex flex-wrap gap-2 items-center px-1">
                             {CATEGORY_COLORS.map(color => (
                                 <button
                                     key={color.name}
                                     onClick={() => setNewCategoryColor(color.name)}
-                                    className={`w-6 h-6 rounded-full border-2 transition-all ${color.fill} ${newCategoryColor === color.name ? 'border-black scale-110 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                    className={`w-7 h-7 rounded-lg transition-all ${color.fill} ${newCategoryColor === color.name ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-900 shadow-lg shadow-black/40 z-10' : 'opacity-60 hover:opacity-100'}`}
                                     title={color.name}
                                 />
                             ))}
                         </div>
                         <button
                             onClick={editingCategory ? handleUpdateCategory : handleAddCategory}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition-colors"
+                            className="px-6 py-3 bg-orange-500 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] italic hover:bg-orange-400 active:translate-y-1 transition-all shadow-[0_4px_0_0_#ea580c]"
                         >
                             {editingCategory ? 'Salvar' : 'Adicionar'}
                         </button>
                     </div>
                     {!editingCategory && (
-                        <p className="text-[10px] text-red-400 mt-2">* Selecione uma categoria abaixo para editar ou excluir.</p>
+                        <p className="text-[9px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-widest mt-3 flex items-center gap-1.5 px-1">
+                            <span className="w-1 h-1 rounded-full bg-slate-500 dark:bg-slate-600"></span> Selecione uma categoria abaixo para editar ou excluir.
+                        </p>
                     )}
                 </div>
             )}
@@ -470,13 +546,13 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                 <form onSubmit={handleSubmit} className="mb-8 p-6 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in slide-in-from-top-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Título da Técnica</label>
+                            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Título da Técnica</label>
                             <input
                                 type="text"
                                 value={newTitle}
-                                onChange={(e) => setNewTitle(e.target.value)}
+                                onChange={(e) => setNewTitle(e.target.value.toUpperCase())}
                                 required
-                                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 outline-none transition-all"
                                 placeholder="Ex: Armlock da guarda fechada"
                             />
                         </div>
@@ -492,11 +568,11 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Categoria</label>
+                            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Categoria</label>
                             <select
                                 value={newCategoryId}
                                 onChange={(e) => setNewCategoryId(e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 outline-none transition-all bg-white"
+                                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 outline-none transition-all"
                             >
                                 <option value="">Outros</option>
                                 {categories.map(cat => (
@@ -517,12 +593,12 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
             )}
 
             {/* Sub-header with Tabs/Filters */}
-            <div className={`flex flex-wrap items-center gap-2 mb-8 border-b border-gray-100 pb-4 ${isManagingCategories ? 'p-4 bg-red-50/10 rounded-xl border-dashed border-red-200' : ''}`}>
+            <div className={`flex flex-wrap items-center gap-3 mb-10 pb-6 border-b border-slate-100 dark:border-slate-800 relative z-10 ${isManagingCategories ? 'p-5 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-dashed border-slate-200 dark:border-slate-700' : ''}`}>
                 <button
                     onClick={() => setSelectedFilter('Todos')}
-                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.1em] transition-all ${selectedFilter === 'Todos'
-                        ? 'bg-red-600 text-white shadow-lg shadow-red-200'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all duo-btn-3d ${selectedFilter === 'Todos'
+                        ? 'bg-blue-600 text-white shadow-[0_4px_0_0_#1d4ed8]'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]'
                         }`}
                 >
                     Todos
@@ -532,6 +608,21 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                     const isDefault = cat.id.startsWith('default-');
                     const isActive = selectedFilter === cat.id && !isManagingCategories;
                     const isConfirming = confirmDeleteId === cat.id;
+
+                    // Match theme colors for 3D buttons
+                    const getThemeShadow = (colorName: string) => {
+                        const shadows: Record<string, string> = {
+                            'Red': '#991b1b',
+                            'Blue': '#1d4ed8',
+                            'Green': '#059669',
+                            'Purple': '#6d28d9',
+                            'Amber': '#b45309',
+                            'Pink': '#be185d',
+                            'Indigo': '#4338ca',
+                            'Slate': '#334155'
+                        };
+                        return shadows[colorName] || '#0f172a';
+                    };
 
                     return (
                         <div key={cat.id} className="relative group flex items-center">
@@ -547,42 +638,40 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                         setSelectedFilter(cat.id);
                                     }
                                 }}
-                                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.1em] transition-all border flex items-center gap-2 ${isActive
-                                    ? `${style.fill} text-white border-transparent shadow-lg`
-                                    : `bg-white ${style.text} ${style.border} hover:${style.bg}`
-                                    } ${isManagingCategories ? 'pr-8' : ''} ${isConfirming ? 'border-red-600 bg-red-600 text-white animate-pulse' : ''}`}
+                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic transition-all duo-btn-3d flex items-center gap-2 ${isActive
+                                    ? `${style.fill} text-white shadow-[0_4px_0_0_${getThemeShadow(cat.color)}]`
+                                    : `bg-white dark:bg-slate-800 ${style.text} hover:${style.bg} shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]`
+                                    } ${isManagingCategories ? 'pr-10' : ''} ${isConfirming ? 'bg-red-600 text-white shadow-[0_4px_0_0_#991b1b] animate-pulse' : ''}`}
                             >
                                 {isConfirming ? 'Confirmar?' : cat.name}
                                 {isManagingCategories && !isConfirming && (
-                                    <div className="flex items-center gap-1 ml-1">
-                                        <Edit2 className="w-3 h-3 opacity-50" />
-                                    </div>
+                                    <Edit2 className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
                                 )}
                             </button>
                             {isManagingCategories && !isDefault && (
-                                <div className="absolute top-1/2 -right-1 -translate-y-1/2 flex items-center gap-1">
+                                <div className="absolute top-1/2 -right-2 -translate-y-1/2 flex items-center gap-1">
                                     {isConfirming ? (
-                                        <div className="flex bg-white rounded-full shadow-lg border border-red-100 p-0.5 z-20">
+                                        <div className="flex bg-slate-900 rounded-xl shadow-2xl border border-slate-700 p-1 z-20">
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDeleteCategory(cat.id);
                                                     setConfirmDeleteId(null);
                                                 }}
-                                                className="bg-red-600 text-white rounded-full p-1 hover:bg-red-700 transition-colors"
+                                                className="bg-red-600 text-white rounded-lg p-1.5 hover:bg-red-500 transition-colors"
                                                 title="Confirmar Exclusão"
                                             >
-                                                <Check className="w-3 h-3" />
+                                                <Check className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setConfirmDeleteId(null);
                                                 }}
-                                                className="text-gray-400 hover:text-gray-600 p-1 transition-colors"
+                                                className="text-slate-400 hover:text-white p-1.5 transition-colors"
                                                 title="Cancelar"
                                             >
-                                                <X className="w-3 h-3" />
+                                                <X className="w-4 h-4" />
                                             </button>
                                         </div>
                                     ) : (
@@ -591,10 +680,10 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                                 e.stopPropagation();
                                                 setConfirmDeleteId(cat.id);
                                             }}
-                                            className="bg-red-600 text-white rounded-full p-1.5 shadow-sm hover:scale-110 transition-transform z-10 opacity-0 group-hover:opacity-100"
+                                            className="bg-red-600 text-white rounded-lg p-2 shadow-lg hover:scale-110 active:scale-95 transition-all z-10 opacity-0 group-hover:opacity-100"
                                             title="Excluir Categoria"
                                         >
-                                            <Trash2 className="w-3 h-3" />
+                                            <Trash2 className="w-3.5 h-3.5" />
                                         </button>
                                     )}
                                 </div>
@@ -607,10 +696,26 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                 {!readOnly && (
                     <button
                         onClick={() => { setIsManagingCategories(true); setEditingCategory(null); setNewCategoryName(''); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all font-bold"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all duo-btn-3d shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]"
                         title="Adicionar Nova Categoria"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-5 h-5" />
+
+                        {/* Onboarding Balloon - Category Attention */}
+                        {showCategoryOnboarding && (
+                            <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-48 bg-emerald-600 text-white p-3.5 rounded-2xl shadow-2xl z-[150] animate-bounce-subtle pointer-events-auto border-2 border-white/20">
+                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-emerald-600 rotate-45 border-r-2 border-b-2 border-white/20"></div>
+                                <p className="text-[10px] font-black uppercase tracking-wider leading-relaxed mb-3">
+                                    CRIE NOVAS CATEGORIAS PERSONALIZADAS PARA ORGANIZAR SEUS VÍDEOS!
+                                </p>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); dismissCategoryOnboarding(); }}
+                                    className="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all"
+                                >
+                                    FOCAR AGORA!
+                                </button>
+                            </div>
+                        )}
                     </button>
                 )}
             </div>
@@ -634,7 +739,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                 <input
                                     type="text"
                                     value={newTitle}
-                                    onChange={(e) => setNewTitle(e.target.value)}
+                                    onChange={(e) => setNewTitle(e.target.value.toUpperCase())}
                                     required
                                     className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all"
                                 />
@@ -684,11 +789,60 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
             )}
 
             {filteredTechniques.length === 0 ? (
-                <div className="text-center py-20 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-100 italic text-gray-400">
-                    <p>Nenhuma técnica cadastrada nesta categoria. Comece adicionando uma agora!</p>
-                </div>
-            ) : (
                 <>
+                    <div className="relative mb-6">
+                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-blue-200 dark:border-blue-800">
+                            <Info className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 italic">
+                            Você ainda não salvou técnicas personalizadas.
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                            Confira as técnicas oficiais do currículo desta semana (Semana {currentWeekNum})
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto text-left px-4 pb-4">
+                        {(() => {
+                            const weekData = curriculumData.find(w => w.week === currentWeekNum);
+                            if (!weekData) return null;
+
+                            const extractItems = (lesson: any) => {
+                                const all: string[] = [];
+                                if (lesson.defesaPessoal) all.push(...lesson.defesaPessoal.items);
+                                if (lesson.jiuJitsuEsportivo) all.push(...lesson.jiuJitsuEsportivo.items);
+                                if (lesson.tecnicaQueda) all.push(...lesson.tecnicaQueda.items);
+                                if (lesson.tecnicaChao) all.push(...lesson.tecnicaChao.items);
+                                return all;
+                            };
+
+                            const items = [
+                                ...extractItems(weekData.gb1.lessonA),
+                                ...extractItems(weekData.gb1.lessonB),
+                                ...extractItems(weekData.gb2.lessonA),
+                                ...extractItems(weekData.gb2.lessonB),
+                            ];
+
+                            const uniqueTechs = Array.from(new Set(items)).map(item => {
+                                const match = item.match(/^(\d+)\.\s*(.*)/);
+                                return match ? match[2] : item;
+                            });
+
+                            return uniqueTechs.slice(0, 6).map((title, idx) => (
+                                <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center gap-3 group/item hover:border-blue-500/50 transition-all opacity-80 hover:opacity-100">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                                        <Check className="w-4 h-4 text-blue-600" />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase leading-tight">
+                                        {title}
+                                    </span>
+                                </div>
+                            ));
+                        })()}
+                    </div>
+                </>
+            ) : (
+                <div className="relative z-10">
                     {selectedFilter === 'Todos' && groupedTechniques ? (
                         <div className="space-y-12">
                             {(Object.entries(groupedTechniques) as [string, Technique[]][]).map(([categoryName, groupTechs]) => {
@@ -706,11 +860,11 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                             onClick={() => toggleCategory(categoryName)}
                                         >
                                             <div className={`w-2 h-8 rounded-full ${style.fill}`}></div>
-                                            <h3 className="text-lg font-black uppercase tracking-widest text-gray-900">{categoryName}</h3>
-                                            <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{groupTechs.length}</span>
+                                            <h3 className="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-gray-100">{categoryName}</h3>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-gray-400 bg-slate-100 dark:bg-gray-800 px-2 py-1 rounded-full">{groupTechs.length}</span>
 
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ml-2 ${expandedCategories.has(categoryName) ? 'bg-red-600 rotate-180' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
-                                                <ChevronDown className={`w-3 h-3 ${expandedCategories.has(categoryName) ? 'text-white' : 'text-gray-500'}`} />
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ml-2 ${expandedCategories.has(categoryName) ? 'bg-red-600 rotate-180' : 'bg-slate-100 dark:bg-gray-800 group-hover:bg-slate-200 dark:group-hover:bg-gray-700'}`}>
+                                                <ChevronDown className={`w-3 h-3 ${expandedCategories.has(categoryName) ? 'text-white' : 'text-slate-500 dark:text-gray-400'}`} />
                                             </div>
 
                                             {(() => {
@@ -770,12 +924,12 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                                                 )}
                                                             </div>
 
-                                                            <h3 className="font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 mb-2 pr-6">
+                                                            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">
                                                                 {tech.title}
                                                             </h3>
 
                                                             <div className="mt-auto pt-4 flex items-center justify-between">
-                                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} ${style.text}`}>
+                                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} dark:bg-slate-800 ${style.text} dark:text-slate-400`}>
                                                                     {tech.category}
                                                                 </span>
                                                                 {tech.platform !== 'other' ? (
@@ -810,25 +964,25 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                             {filteredTechniques.map((tech) => {
                                 const style = getCategoryStyles(tech.category, tech.category_id);
                                 return (
-                                    <div key={tech.id} className="group relative bg-white rounded-2xl border border-gray-100 p-1 hover:border-transparent hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-300 overflow-hidden">
+                                    <div key={tech.id} className="group relative bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-1 hover:border-transparent hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-300 overflow-hidden">
                                         <div className={`h-1.5 w-12 rounded-full absolute -top-[1px] left-8 ${style.fill} z-10`}></div>
 
                                         <div className="p-4 flex flex-col h-full animate-in fade-in duration-300">
                                             <div className="flex items-start justify-between mb-4">
-                                                <div className={`p-3 rounded-2xl ${style.bg} ${style.text} group-hover:scale-110 transition-transform duration-500`}>
+                                                <div className={`p-3 rounded-2xl ${style.bg} dark:bg-slate-800/80 ${style.text} dark:text-slate-300 group-hover:scale-110 transition-transform duration-500`}>
                                                     {getPlatformIcon(tech.platform)}
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                                     <button
                                                         onClick={() => startEditingTechnique(tech)}
-                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
                                                         title="Editar Técnica"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onDeleteTechnique(tech.id)}
-                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                                                         title="Excluir Técnica"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -836,12 +990,12 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                                                 </div>
                                             </div>
 
-                                            <h3 className="font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 mb-2 pr-6">
+                                            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">
                                                 {tech.title}
                                             </h3>
 
                                             <div className="mt-auto pt-4 flex items-center justify-between">
-                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} ${style.text}`}>
+                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} dark:bg-slate-800 ${style.text} dark:text-slate-400`}>
                                                     {tech.category}
                                                 </span>
                                                 {tech.platform !== 'other' ? (
@@ -868,8 +1022,9 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                             })}
                         </div>
                     )}
-                </>
+                </div>
             )}
+
             {/* Video Modal */}
             {selectedVideo && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
@@ -879,7 +1034,6 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                     ></div>
 
                     <div className="relative w-full max-w-5xl h-full flex flex-col isolate">
-                        {/* Header Info (Stays at the top) */}
                         <div className="flex items-start justify-between mb-4 md:mb-8">
                             <div className="space-y-1 md:space-y-2">
                                 <span className={`inline-block text-[10px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full ${getCategoryStyles(selectedVideo.category, selectedVideo.category_id).fill} text-white shadow-lg`}>
@@ -897,17 +1051,10 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                             </button>
                         </div>
 
-                        {/* Player Container (Takes remaining space) */}
                         <div className="flex-grow flex items-center justify-center min-h-0">
-                            <div className={`
-                                w-full h-full flex items-center justify-center
-                                ${selectedVideo.platform === 'instagram' ? 'max-h-full' : 'aspect-video'}
-                            `}>
+                            <div className={`w-full h-full flex items-center justify-center ${selectedVideo.platform === 'instagram' ? 'max-h-full' : 'aspect-video'}`}>
                                 {getEmbedUrl(selectedVideo) ? (
-                                    <div className={`
-                                        relative bg-black rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5 w-full h-full
-                                        ${selectedVideo.platform === 'instagram' ? 'max-w-full md:max-w-[450px]' : ''}
-                                    `}>
+                                    <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5 w-full h-full ${selectedVideo.platform === 'instagram' ? 'max-w-full md:max-w-[450px]' : ''}`}>
                                         <iframe
                                             src={getEmbedUrl(selectedVideo)!}
                                             className="w-full h-full"
@@ -938,7 +1085,6 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
                             </div>
                         </div>
 
-                        {/* Branding/Footer */}
                         <div className="mt-4 md:mt-8 opacity-20 text-center flex-shrink-0">
                             <span className="text-white text-[10px] font-black uppercase tracking-[1em] ml-[1em] whitespace-nowrap">GB ANDRADAS</span>
                         </div>
@@ -948,3 +1094,4 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({ techniques, onAd
         </div>
     );
 };
+

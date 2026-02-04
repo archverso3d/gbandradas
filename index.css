@@ -3,37 +3,135 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-primary: #f1f5f9;
+    /* Slate 100 - Stronger gray than slate-50 */
+    --text-primary: #0f172a;
+    /* Slate 900 */
+    --surface: #ffffff;
+    --border-soft: rgba(226, 232, 240, 0.5);
+    /* Slate 200/50 */
+  }
+
+  .dark {
+    --bg-primary: #020617;
+    /* Slate 950 */
+    --text-primary: #f8fafc;
+    /* Slate 50 */
+    --surface: #0f172a;
+    /* Slate 900 */
+    --border-soft: rgba(30, 41, 59, 0.5);
+    /* Slate 800/50 */
+  }
+
   html {
     scroll-behavior: smooth;
+    transition: background-color 0.5s ease, color 0.5s ease;
   }
-  
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
   /* Improve focus visibility for accessibility */
   *:focus-visible {
     outline: 2px solid #dc2626;
     outline-offset: 2px;
   }
+
+  /* Custom Typography Tokens */
+  .font-title-bold {
+    @apply font-black uppercase italic tracking-widest text-slate-900 dark:text-slate-100;
+  }
+
+  .font-label-bold {
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 italic;
+  }
 }
 
 @layer utilities {
+  .ease-spring {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 3D Button Utility (Duolingo Style) */
+  .duo-btn-3d {
+    @apply relative transition-all duration-150 transform active:translate-y-1 active:shadow-none bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700;
+    box-shadow: 0 4px 0 #e2e8f0;
+  }
+
+  .dark .duo-btn-3d {
+    box-shadow: 0 4px 0 #1e293b;
+  }
+
+  .duo-btn-3d-blue {
+    @apply bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700;
+    box-shadow: 0 4px 0 0 #1d4ed8;
+    /* Blue 700 */
+  }
+
+  .duo-btn-3d-purple {
+    @apply bg-purple-600 text-white hover:bg-purple-500 active:bg-purple-700;
+    box-shadow: 0 4px 0 0 #6d28d9;
+    /* Purple 700 */
+  }
+
+  .duo-btn-3d-red {
+    @apply bg-red-600 text-white hover:bg-red-500 active:bg-red-700;
+    box-shadow: 0 4px 0 0 #b91c1c;
+    /* Red 700 */
+  }
+
+  .duo-btn-3d-emerald {
+    @apply bg-emerald-500 text-white hover:bg-emerald-400 active:bg-emerald-600;
+    box-shadow: 0 4px 0 0 #059669;
+    /* Emerald 600 */
+  }
+
+  .duo-btn-3d-slate {
+    @apply bg-slate-800 text-white hover:bg-slate-700 active:bg-slate-900;
+    box-shadow: 0 4px 0 0 #0f172a;
+    /* Slate 900 */
+  }
+
   .animate-fade-in-up {
     animation: fadeInUp 0.5s ease-out;
   }
-  
+
   .animate-fade-in-down {
     animation: fadeInDown 0.3s ease-out;
   }
-  
+
   /* Minimum touch target size for mobile */
   .touch-target {
     min-width: 44px;
     min-height: 44px;
   }
-  
+
   /* Skeleton loading animation */
   .skeleton {
     background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
     background-size: 200% 100%;
     animation: loading 1.5s ease-in-out infinite;
+  }
+
+  .animate-bounce-subtle {
+    animation: bounceSubtle 2s infinite;
+  }
+}
+
+@keyframes bounceSubtle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+
+  50% {
+    transform: translateY(-6px);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
 
@@ -42,6 +140,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -53,6 +152,7 @@
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -63,6 +163,7 @@
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }

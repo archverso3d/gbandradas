@@ -10,7 +10,7 @@ const Home: React.FC = () => {
             <Hero />
 
             {/* About Section - Brief Intro */}
-            <section id="sobre" className="py-24 border-b border-gray-100 overflow-hidden">
+            <section id="sobre" className="py-24 border-b border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-950 transition-colors">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                     <div className="relative">
                         <img
@@ -27,23 +27,23 @@ const Home: React.FC = () => {
                     </div>
                     <div>
                         <h2 className="text-red-600 font-bold uppercase tracking-widest text-sm mb-4">Nossa Filosofia</h2>
-                        <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-gray-900 mb-8 leading-tight">
+                        <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-gray-900 dark:text-white mb-8 leading-tight">
                             Mais de 30 Anos <br /> de Legado Global
                         </h3>
-                        <p className="text-gray-600 mb-6 text-lg leading-relaxed">
+                        <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg leading-relaxed">
                             A Gracie Barra é a maior e mais bem sucedida equipe de Jiu-Jitsu do mundo. Em Andradas, trazemos essa excelência para você, com foco em um ambiente familiar, limpo e profissional.
                         </p>
                         <div className="grid grid-cols-2 gap-8 mt-12">
                             <div>
-                                <h4 className="font-black text-3xl text-gray-900">800+</h4>
+                                <h4 className="font-black text-3xl text-gray-900 dark:text-white">800+</h4>
                                 <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Escolas no Mundo</p>
                             </div>
                             <div>
-                                <h4 className="font-black text-3xl text-gray-900">100%</h4>
+                                <h4 className="font-black text-3xl text-gray-900 dark:text-white">100%</h4>
                                 <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Foco no Aluno</p>
                             </div>
                         </div>
-                        <button className="mt-12 bg-black text-white px-10 py-4 font-bold uppercase text-xs tracking-widest hover:bg-red-600 transition-all">
+                        <button className="mt-12 bg-black dark:bg-red-600 text-white dark:hover:bg-red-700 px-10 py-4 font-bold uppercase text-xs tracking-widest hover:bg-red-600 transition-all">
                             Conheça Nossa História
                         </button>
                     </div>

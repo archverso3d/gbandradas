@@ -31,6 +31,20 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
                 .select('user_id, full_name, avatar_url, current_belt')
                 .order('full_name');
 
+            if (localStorage.getItem('demo_mode') === 'true') {
+                const demoId = localStorage.getItem('demo_user_id') || 'demo-user-me';
+                const mockUsers: MuralProfile[] = [
+                    { user_id: 'demo-1', full_name: 'Mestre Carlos', avatar_url: null, current_belt: 'Faixa Preta' },
+                    { user_id: 'demo-2', full_name: 'Ana Silva', avatar_url: null, current_belt: 'Faixa Azul' },
+                    { user_id: 'demo-3', full_name: 'Bruno Ramos', avatar_url: null, current_belt: 'Faixa Roxa' },
+                    { user_id: 'demo-4', full_name: 'Carla Dias', avatar_url: null, current_belt: 'Faixa Marrom' },
+                    { user_id: demoId, full_name: 'Aluno Teste', avatar_url: null, current_belt: 'Faixa Branca' }
+                ];
+                setUsers(mockUsers);
+                setLoading(false);
+                return;
+            }
+
             if (error) {
                 console.error('Error fetching users:', error);
             }
@@ -118,13 +132,13 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
     if (users.length === 0) return null;
 
     return (
-        <div className="mb-10">
-            <div className="flex items-center justify-between mb-6 px-1">
-                <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Users className="w-4 h-4" />
+        <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 p-6 mb-10 transition-all hover:shadow-2xl">
+            <div className="flex items-center justify-between mb-8 px-1">
+                <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
+                    <Users className="w-4 h-4 text-blue-600" />
                     Comunidade
                 </h3>
-                <span className="text-xs font-semibold text-slate-300 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] italic bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50">
                     {users.length} Alunos
                 </span>
             </div>

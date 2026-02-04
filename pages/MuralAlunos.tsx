@@ -71,7 +71,7 @@ const MuralAlunos: React.FC = () => {
     const adultsCount = (groupedStudents['GB1']?.length || 0) + (groupedStudents['GB2']?.length || 0) + (groupedStudents['GB F']?.length || 0);
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 transition-colors duration-500">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
         </div>
     );
@@ -116,7 +116,7 @@ const MuralAlunos: React.FC = () => {
     );
 
     return (
-        <div className="min-h-screen bg-white pt-24 sm:pt-32 lg:pt-40 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-950 pt-24 sm:pt-32 lg:pt-40 pb-20 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
             <div className="max-w-7xl mx-auto">
                 {/* Breadcrumb Navigation */}
                 <div className="mb-6">
@@ -142,7 +142,7 @@ const MuralAlunos: React.FC = () => {
 
                 <div className="space-y-20">
                     {/* Programas de Kids */}
-                    <div className="bg-slate-50 rounded-[3rem] p-8 md:p-12 border border-slate-100/50 shadow-sm">
+                    <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-12 border border-slate-100/50 dark:border-slate-800 shadow-sm transition-colors">
                         <button
                             onClick={() => toggleSection('kids')}
                             className="w-full flex items-center justify-between group mb-8 focus:outline-none"
@@ -169,7 +169,7 @@ const MuralAlunos: React.FC = () => {
                     </div>
 
                     {/* Programas de Adultos */}
-                    <div className="bg-slate-50 rounded-[3rem] p-8 md:p-12 border border-slate-100/50 shadow-sm">
+                    <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-12 border border-slate-100/50 dark:border-slate-800 shadow-sm transition-colors">
                         <button
                             onClick={() => toggleSection('adults')}
                             className="w-full flex items-center justify-between group mb-8 focus:outline-none"
@@ -226,7 +226,7 @@ const StudentCard: React.FC<{ student: StudentProfile }> = ({ student }) => {
                                     'bg-slate-200';
 
     return (
-        <div className="group bg-white rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all duration-500">
+        <div className="group bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:-translate-y-1 transition-all duration-500">
             <div className="relative mb-4">
                 <div className="aspect-square rounded-2xl bg-slate-50 overflow-hidden border-2 border-slate-50 flex items-center justify-center">
                     {student.avatar_url ? (

@@ -21,6 +21,7 @@ interface AuthContextType {
     isAdmin: boolean;
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
+    signInDemo: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,6 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Logout error (handled):', error);
         } finally {
             console.log('🧹 Clearing local data...');
+            localStorage.removeItem('demo_user_id');
+            localStorage.removeItem('demo_mode');
             setUser(null);
             setSession(null);
             setProfile(null);
@@ -110,6 +113,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 if (sessionError) {
                     console.error('❌ [AUTH] Session retrieval error:', sessionError);
+                }
+
+                // Check for Demo Mode first
+                const demoId = localStorage.getItem('demo_user_id');
+                const isDemo = localStorage.getItem('demo_mode') === 'true';
+
+                if (isDemo && demoId && mounted) {
+                    console.log('🚀 [AUTH] Initializing in DEMO MODE');
+                    const mockUser = {
+                        id: demoId,
+                        email: 'aluno@demo.com',
+                        user_metadata: { full_name: 'Aluno Teste (Demo)' },
+                        aud: 'authenticated',
+                        role: 'authenticated'
+                    } as any;
+
+                    const mockProfile = {
+                        user_id: demoId,
+                        role: 'student',
+                        full_name: 'Aluno Teste (Demo)',
+                        avatar_url: null,
+                        current_belt: 'Faixa Branca',
+                        degrees: 0,
+                        start_date: new Date().toISOString(),
+                        student_category: 'GB1'
+                    } as AuthProfile;
+
+                    setUser(mockUser);
+                    setProfile(mockProfile);
+                    setLoading(false);
+                    return;
                 }
 
                 if (mounted) {
@@ -212,6 +246,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, [user?.id]);
 
+    const signInDemo = () => {
+        console.log('🚀 Signing in as DEMO USER');
+        const demoId = 'demo-user-' + Math.random().toString(36).substr(2, 9);
+
+        const mockUser = {
+            id: demoId,
+            email: 'aluno@demo.com',
+            user_metadata: { full_name: 'Aluno Teste (Demo)' },
+            aud: 'authenticated',
+            role: 'authenticated'
+        } as any;
+
+        const mockProfile = {
+            user_id: demoId,
+            role: 'student',
+            full_name: 'Aluno Teste (Demo)',
+            avatar_url: null,
+            current_belt: 'Faixa Branca',
+            degrees: 0,
+            start_date: new Date().toISOString(),
+            student_category: 'GB1'
+        } as AuthProfile;
+
+        localStorage.setItem('demo_user_id', demoId);
+        localStorage.setItem('demo_mode', 'true');
+
+        setUser(mockUser);
+        setSession(null);
+        setProfile(mockProfile);
+    };
+
     const isAdmin = profile?.role === 'admin';
 
     const value = {
@@ -221,7 +286,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         isAdmin,
         signOut,
-        refreshProfile
+        refreshProfile,
+        signInDemo
     };
 
     return (

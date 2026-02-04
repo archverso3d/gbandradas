@@ -15,7 +15,7 @@ type AuthMode = 'login' | 'signup';
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
     const [redirectPending, setRedirectPending] = useState(false);
-    const { refreshProfile, user, profile, isAdmin } = useAuth();
+    const { refreshProfile, user, profile, isAdmin, signInDemo } = useAuth();
     const [mode, setMode] = useState<AuthMode>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -123,6 +123,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         }
 
         try {
+            if (mode === 'login' && email.trim().toLowerCase() === 'aluno' && password === 'aluno') {
+                console.log('🚀 Login DEMO detectado');
+                signInDemo();
+                setRedirectPending(true);
+                return;
+            }
+
             if (mode === 'login') {
                 const effectiveEmail = email.trim().toLowerCase() === 'admin' ? 'admin@admin.com' : email.trim().toLowerCase();
                 console.log('Tentando login com:', effectiveEmail);

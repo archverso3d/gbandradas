@@ -15,15 +15,26 @@ interface TrainingHistoryProps {
     studentCategory?: string;
 }
 
-// Helper to get Year-Week identifier
+// Helper to check if a status counts as present
+const isPresent = (status: string | undefined) => {
+    if (!status) return false;
+    const s = status.toLowerCase();
+    return s === 'present' || s === 'presente' || s === 'a' || s === 'b' || s === 'n' || s === 'p';
+};
+
+// Helper to get Year-Week identifier using local date
 const getYearWeek = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const date = new Date(d.valueOf());
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-    const week1 = new Date(date.getFullYear(), 0, 4);
-    const weekNumber = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-    return `${date.getFullYear()}-${String(weekNumber).padStart(2, '0')}`;
+    const d = new Date(dateStr + 'T12:00:00'); // Use mid-day to avoid TZ shifts
+    const target = new Date(d.valueOf());
+    const dayNr = (d.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = target.valueOf();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) {
+        target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+    }
+    const weekNumber = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+    return `${target.getFullYear()}-${String(weekNumber).padStart(2, '0')}`;
 };
 
 export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData, studentStartDate, studentCategory }) => {
@@ -33,43 +44,71 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
             return { completedWeeks: 0, lostWeeks: 0, currentStreak: 0, history: [] };
         }
 
-        // Group attendance by week
-        const weeksMap = new Map<string, number>();
+        // Group attendance by week and types
+        const weeksMap = new Map<string, Set<string>>();
         attendanceData.forEach(record => {
-            if (record.status === 'present') {
+            if (isPresent(record.status)) {
                 const weekId = getYearWeek(record.date);
-                weeksMap.set(weekId, (weeksMap.get(weekId) || 0) + 1);
+                if (!weeksMap.has(weekId)) weeksMap.set(weekId, new Set());
+
+                const label = (record.classLabel || '').toUpperCase();
+                if (label.includes('A') || label === 'A') weeksMap.get(weekId)?.add('A');
+                else if (label.includes('B') || label === 'B') weeksMap.get(weekId)?.add('B');
+                else if (label.includes('NO-GI') || label.includes('NOGI') || label === 'N') weeksMap.get(weekId)?.add('N');
             }
         });
 
         // Calculate Stats
         const now = new Date();
+        const start = new Date(studentStartDate + 'T12:00:00');
+        const totalClasses = attendanceData.filter(r => isPresent(r.status)).length;
 
-        // Find earliest attendance to start counting lost weeks
-        const presentDates = attendanceData
-            .filter(r => r.status === 'present')
-            .map(r => new Date(r.date).getTime());
+        // Count weeks with 0 training from start until now
+        let lostCount = 0;
+        let walkDate = new Date(start.getTime());
+        // Walk back to Monday of the week including the start date
+        const startDay = walkDate.getDay();
+        const diffToMon = walkDate.getDate() - startDay + (startDay === 0 ? -6 : 1);
+        walkDate.setDate(diffToMon);
+        walkDate.setHours(12, 0, 0, 0);
 
-        if (presentDates.length === 0) {
-            return { completedWeeks: 0, lostWeeks: 0, currentStreak: 0, history: [] };
+        while (walkDate <= now) {
+            const y = walkDate.getFullYear();
+            const m = String(walkDate.getMonth() + 1).padStart(2, '0');
+            const d = String(walkDate.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            const weekId = getYearWeek(dateStr);
+            if (!weeksMap.has(weekId)) {
+                lostCount++;
+            }
+            walkDate.setDate(walkDate.getDate() + 7);
         }
 
-        const start = new Date(Math.min(...presentDates));
-
-        let completed = 0;
+        // Streak logic - current consecutive weeks back from now
         let streak = 0;
-
-        completed = Array.from(weeksMap.values()).filter(count => count >= 2).length;
-
-        // Streak logic
-        let tempStreak = 0;
+        let stars = 0;
         let checkDate = new Date();
+        checkDate.setHours(12, 0, 0, 0);
+
+        // Loop back up to 52 weeks
         for (let i = 0; i < 52; i++) {
-            const weekId = getYearWeek(checkDate.toISOString());
-            const count = weeksMap.get(weekId) || 0;
-            if (count >= 2) {
-                tempStreak++;
+            const y = checkDate.getFullYear();
+            const m = String(checkDate.getMonth() + 1).padStart(2, '0');
+            const d = String(checkDate.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            const weekId = getYearWeek(dateStr);
+            const classes = weeksMap.get(weekId) || new Set();
+
+            const hasA = classes.has('A');
+            const hasB = classes.has('B');
+            const hasN = classes.has('N');
+
+            if (hasA && hasB) {
+                streak++;
+                if (hasN) stars++;
             } else {
+                // If current week (i=0) hasn't hit A&B yet, but might still (week isn't over),
+                // we skip it and check previous weeks. But if it's already a gap in a past week, streak breaks.
                 if (i === 0) {
                     checkDate.setDate(checkDate.getDate() - 7);
                     continue;
@@ -78,13 +117,9 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
             }
             checkDate.setDate(checkDate.getDate() - 7);
         }
-        streak = tempStreak;
 
-        const totalWeeksEst = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7)));
-        const lost = Math.max(0, totalWeeksEst - completed);
-
-        return { completedWeeks: completed, lostWeeks: lost, currentStreak: streak, history: [...attendanceData].reverse() };
-    }, [attendanceData]);
+        return { completedWeeks: totalClasses, lostWeeks: lostCount, currentStreak: streak, stars, history: [...attendanceData].reverse() };
+    }, [attendanceData, studentStartDate]);
 
     const formatDate = (dateStr: string) => {
         const [year, month, day] = dateStr.split('-');
@@ -99,66 +134,74 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-            <div className="p-6">
-                <div className="flex items-center gap-3 mb-8">
-                    <div className="p-2 bg-indigo-50 rounded-lg">
-                        <History className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 overflow-hidden mb-8 transition-all hover:shadow-2xl">
+            <div className="p-5">
+                <div className="flex items-center justify-between mb-8 px-1">
+                    <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic drop-shadow-sm">Histórico de Treinos</h2>
+                    <div className="p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                        <History className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                     </div>
-                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Histórico de Treinos</h2>
                 </div>
 
                 {/* Main Stats: Streak Hero */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl p-6 mb-6 shadow-lg shadow-orange-100">
+                <div className="relative overflow-hidden bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl p-5 mb-6 shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all cursor-default group">
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
-                            <div className="text-4xl font-black text-white mb-1">{stats.currentStreak}</div>
-                            <div className="text-[10px] font-bold text-orange-100 uppercase tracking-widest opacity-90">Semanas em Ofensiva</div>
+                            <div className="text-5xl font-black text-white mb-1 italic tracking-tighter drop-shadow-md">{stats.currentStreak}</div>
+                            <div className="text-[10px] font-black text-orange-100 uppercase tracking-[0.2em] opacity-90 flex items-center gap-2">
+                                Semanas em Ofensiva {stats.stars > 0 && <span className="flex items-center gap-0.5 bg-white/20 px-1.5 py-0.5 rounded-full"><span className="text-yellow-300">★</span> {stats.stars}</span>}
+                            </div>
                         </div>
-                        <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30">
-                            <Flame className="w-8 h-8 text-white fill-orange-200" />
+                        <div className="p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 group-hover:rotate-12 transition-transform duration-500">
+                            <Flame className="w-10 h-10 text-white fill-orange-200" />
                         </div>
                     </div>
+                    {/* Decorative pattern */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 -mr-8 -mt-8 rounded-full blur-2xl"></div>
                 </div>
 
                 {/* Sub Stats */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Realizadas</span>
+                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                            <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Realizadas</span>
                         </div>
-                        <div className="text-xl font-black text-slate-800">{stats.completedWeeks}</div>
+                        <div className="text-2xl font-black text-slate-900 dark:text-slate-100 italic leading-none">{stats.completedWeeks}</div>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
-                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Perdidas</span>
+                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border-2 border-slate-100 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
+                            <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Perdidas</span>
                         </div>
-                        <div className="text-xl font-black text-slate-800">{stats.lostWeeks}</div>
+                        <div className="text-2xl font-black text-slate-900 dark:text-slate-100 italic leading-none">{stats.lostWeeks}</div>
                     </div>
                 </div>
 
                 {/* Progress */}
-                <div className="mb-10">
-                    <div className="flex justify-between items-end mb-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Performance Geral</span>
-                        <span className="text-xs font-black text-indigo-600">{Math.round((stats.completedWeeks / Math.max(1, stats.completedWeeks + stats.lostWeeks)) * 100)}%</span>
+                <div className="mb-8 px-1">
+                    <div className="flex justify-between items-end mb-3">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Performance Geral</span>
+                        <span className="text-xs font-black text-blue-400 italic bg-blue-400/10 px-2 py-0.5 rounded-md">{Math.round((stats.completedWeeks / Math.max(1, stats.completedWeeks + stats.lostWeeks)) * 100)}%</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-50">
+                    <div className="h-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-1 border border-slate-200 dark:border-slate-700">
                         <div
-                            className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full transition-all duration-1000 shadow-sm"
+                            className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(37,99,235,0.3)] relative overflow-hidden"
                             style={{ width: `${Math.min(100, (stats.completedWeeks / Math.max(1, stats.completedWeeks + stats.lostWeeks)) * 100)}%` }}
-                        ></div>
+                        >
+                            <div className="absolute inset-0 bg-white/20 skew-x-12 -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                        </div>
                     </div>
                 </div>
 
                 {/* History List */}
-                <div className="space-y-4">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Treinos Recentes</h3>
+                <div className="space-y-3">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                        <div className="w-8 h-px bg-slate-100 dark:bg-slate-800"></div> Treinos Recentes
+                    </h3>
                     {stats.history.length === 0 ? (
-                        <div className="bg-slate-50 rounded-xl py-8 px-4 text-center border-2 border-dashed border-slate-100">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nenhum treino encontrado</p>
+                        <div className="bg-slate-800/20 rounded-2xl py-12 px-4 text-center border-2 border-dashed border-slate-800">
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">Nenhum treino encontrado</p>
                         </div>
                     ) : (
                         stats.history.slice(0, 4).map((record) => {
@@ -179,29 +222,29 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
                                 const d = new Date(date + 'T12:00:00');
                                 const isFriday = d.getDay() === 5;
 
-                                if (l.includes('aula a') || l === 'a') return 'bg-blue-600 shadow-blue-200';
-                                if (l.includes('aula b') || l === 'b') return 'bg-purple-600 shadow-purple-200';
-                                if (l.includes('no-gi') || l.includes('nogi') || (!l && isFriday)) return 'bg-slate-900 shadow-slate-200';
-                                return 'bg-indigo-600 shadow-indigo-200';
+                                if (l.includes('aula a') || l === 'a') return 'bg-blue-600 shadow-blue-900/40';
+                                if (l.includes('aula b') || l === 'b') return 'bg-purple-600 shadow-purple-900/40';
+                                if (l.includes('no-gi') || l.includes('nogi') || (!l && isFriday)) return 'bg-slate-900 shadow-slate-900/40';
+                                return 'bg-indigo-600 shadow-indigo-900/40';
                             };
 
                             return (
-                                <div key={record.id} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${getStyle(record.classLabel, record.date)}`}>
+                                <div key={record.id} className="group flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-800">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${getStyle(record.classLabel, record.date)} group-hover:scale-110 transition-transform`}>
                                         <span className="text-[10px] font-black text-white tracking-widest">{studentCategory || 'GB2'}</span>
                                     </div>
                                     <div className="flex-grow">
-                                        <div className="text-xs font-black text-slate-800 uppercase tracking-wide group-hover:text-indigo-600 transition-colors">
+                                        <div className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors italic">
                                             {record.weekNumber ? `Semana ${record.weekNumber} • ` : ''}{getFullLabel(record.classLabel)}
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-bold text-slate-500">{dateInfo.full}</span>
-                                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                            <span className="text-[10px] font-bold text-slate-400">{dateInfo.weekday}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{dateInfo.full}</span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">{dateInfo.weekday}</span>
                                         </div>
                                     </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                    <div className="opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                                     </div>
                                 </div>
                             );
@@ -211,7 +254,7 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
             </div>
 
             {stats.history.length > 4 && (
-                <button className="w-full py-4 bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:bg-slate-100 hover:text-indigo-600 transition-all border-t border-slate-100">
+                <button className="w-full py-5 bg-slate-50 dark:bg-slate-800/30 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border-t border-slate-100 dark:border-slate-800 italic">
                     Ver Histórico Completo
                 </button>
             )}

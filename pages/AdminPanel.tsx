@@ -177,7 +177,7 @@ const AdminPanel: React.FC = () => {
     });
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 transition-colors duration-500">
             <div className="flex flex-col items-center gap-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
                 <p className="text-slate-400 font-bold text-xs uppercase tracking-widest animate-pulse">Carregando Painel...</p>
@@ -188,7 +188,7 @@ const AdminPanel: React.FC = () => {
     if (!isAdmin) return null;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pt-24 lg:pt-32 xl:pt-40 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-950 pt-24 lg:pt-32 xl:pt-40 pb-12 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
             <div className="max-w-7xl mx-auto">
                 {/* Breadcrumb Navigation */}
                 <div className="mb-6">
@@ -275,14 +275,14 @@ const AdminPanel: React.FC = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 h-full flex flex-col">
+                            <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 p-8 h-full flex flex-col transition-colors">
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="space-y-1">
-                                        <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Mural de Alunos</h2>
-                                        <p className="text-slate-400 font-medium text-xs">Distribuição dos alunos por programas oficiais.</p>
+                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">Mural de Alunos</h2>
+                                        <p className="text-slate-400 dark:text-slate-500 font-medium text-xs">Distribuição dos alunos por programas oficiais.</p>
                                     </div>
-                                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100/50">
-                                        <Users className="w-6 h-6 text-slate-300" />
+                                    <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center border border-slate-100/50 dark:border-slate-700/50">
+                                        <Users className="w-6 h-6 text-slate-300 dark:text-slate-600" />
                                     </div>
                                 </div>
 

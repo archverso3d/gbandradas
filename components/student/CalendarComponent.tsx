@@ -47,28 +47,42 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({ attendance
     }).length;
 
     return (
-        <div className="bg-[#0F172A] rounded-2xl shadow-xl border border-slate-800 p-5 relative overflow-hidden transition-all hover:shadow-2xl">
+        <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 p-5 sm:p-6 relative overflow-hidden transition-all hover:shadow-2xl">
             {/* Header */}
-            <div className="flex items-center justify-between mb-5 px-1">
-                <div className="flex items-center gap-2">
+            <div className="relative grid grid-cols-[1fr_auto_1fr] items-center mb-8 px-1">
+                {/* Left side spacer/prev button */}
+                <div className="flex justify-end pr-3 sm:pr-5">
                     <button
                         onClick={prevMonth}
-                        className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+                        className="p-2.5 hover:bg-slate-800 rounded-2xl transition-all duo-btn-3d active:translate-y-0.5 active:shadow-none bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-white"
                     >
-                        <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <h2 className="text-sm font-black text-slate-200 uppercase tracking-widest italic">
-                        {monthNames[currentMonth]} {currentYear}
-                    </h2>
-                    <button
-                        onClick={nextMonth}
-                        className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-                    >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                 </div>
-                <div className="p-1.5 bg-slate-800/50 rounded-lg">
-                    <CalendarIcon className="w-3.5 h-3.5 text-slate-500" />
+
+                {/* Center text block */}
+                <div className="flex flex-col items-center justify-center min-w-[120px] sm:min-w-[180px]">
+                    <h2 className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-200 uppercase tracking-tighter italic leading-none drop-shadow-md text-center">
+                        {monthNames[currentMonth]}
+                    </h2>
+                    <p className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mt-1.5 italic text-center pl-[0.3em]">
+                        {currentYear}
+                    </p>
+                </div>
+
+                {/* Right side next button and icon container */}
+                <div className="flex justify-start pl-3 sm:pl-5 relative">
+                    <button
+                        onClick={nextMonth}
+                        className="p-2.5 hover:bg-slate-800 rounded-2xl transition-all duo-btn-3d active:translate-y-0.5 active:shadow-none bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-white"
+                    >
+                        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </button>
+
+                    {/* Absolute positioned calendar icon to not disturb centering */}
+                    <div className="absolute left-[calc(100%+8px)] sm:left-[calc(100%+16px)] top-1/2 -translate-y-1/2 p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 hidden lg:block">
+                        <CalendarIcon className="w-4 h-4 text-slate-500" />
+                    </div>
                 </div>
             </div>
 
@@ -100,8 +114,8 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({ attendance
                                     ${isPresent
                                         ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
                                         : isToday
-                                            ? 'border-2 border-blue-500 text-blue-400'
-                                            : 'text-slate-500 hover:text-slate-300'
+                                            ? 'border-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                                            : 'text-slate-600 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                                     }
                                 `}
                             >
@@ -116,10 +130,10 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({ attendance
             </div>
 
             {/* Footer / Stats */}
-            <div className="mt-5 pt-4 border-t border-slate-800 flex justify-between items-center px-1">
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center px-1">
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Aulas no Mês</span>
-                    <span className="text-lg font-black text-slate-100 italic leading-none mt-1">{totalClassesInMonth}</span>
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Aulas no Mês</span>
+                    <span className="text-lg font-black text-slate-900 dark:text-slate-100 italic leading-none mt-1">{totalClassesInMonth}</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5">

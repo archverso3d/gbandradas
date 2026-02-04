@@ -46,7 +46,7 @@ const Navbar: React.FC = () => {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${showSolidNavbar
-          ? 'bg-white/80 backdrop-blur-lg shadow-sm py-3 border-b border-gray-100/50'
+          ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm py-3 border-b border-gray-100/50 dark:border-gray-800/50'
           : 'bg-transparent py-6'
           }`}
       >
@@ -63,15 +63,14 @@ const Navbar: React.FC = () => {
               />
             </div>
 
-            {/* Desktop Nav */}
             <div className="hidden lg:flex items-center space-x-1">
-              <div className="flex items-center bg-gray-100/50 backdrop-blur-md rounded-full p-1.5 mr-4 border border-white/20">
+              <div className="flex items-center bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-md rounded-full p-1.5 mr-4 border border-white/20 dark:border-gray-700/30">
                 {navLinks.map((link) => (
                   <a
                     key={link.name}
                     href={link.href}
                     className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-full ${showSolidNavbar
-                      ? 'text-slate-600 hover:bg-white hover:text-red-600'
+                      ? 'text-slate-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:text-red-600'
                       : 'text-slate-200 hover:bg-white/10 hover:text-white'
                       }`}
                   >
@@ -82,11 +81,11 @@ const Navbar: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 {user ? (
-                  <div className="flex items-center gap-2 bg-slate-50/50 p-1 rounded-full border border-slate-100">
+                  <div className="flex items-center gap-2 bg-slate-50/50 dark:bg-gray-800/50 p-1 rounded-full border border-slate-100 dark:border-gray-700">
                     <button
                       disabled={loading}
                       onClick={() => navigate(isAdmin ? '/admin' : '/aluno')}
-                      className={`px-5 py-2.5 bg-slate-900 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`px-5 py-2.5 bg-slate-900 dark:bg-gray-100 dark:text-slate-900 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-black dark:hover:bg-white transition-all shadow-lg shadow-slate-200 dark:shadow-black/20 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {loading ? '...' : (isAdmin ? 'Admin' : 'Painel')}
                     </button>

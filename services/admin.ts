@@ -15,6 +15,13 @@ export interface StudentProfile {
     student_category: string | null;
 }
 
+// Helper to check if we are in demo mode
+const isDemoMode = () => localStorage.getItem('demo_mode') === 'true';
+
+// Helper for Mock Data persistence
+const getMockData = (key: string) => JSON.parse(localStorage.getItem(`demo_data_${key}`) || '[]');
+const saveMockData = (key: string, data: any) => localStorage.setItem(`demo_data_${key}`, JSON.stringify(data));
+
 export const adminService = {
     /**
      * Fetch all student profiles
@@ -46,6 +53,21 @@ export const adminService = {
      * Mark attendance for a student on a specific date
      */
     async markAttendance(userId: string, weekNumber?: number, classLabel?: string, date: Date = new Date()) {
+        if (isDemoMode()) {
+            console.log('📝 [DEMO] Marking attendance locally');
+            const attendance = getMockData('attendance');
+            const newRecord = {
+                id: Math.random().toString(36).substr(2, 9),
+                user_id: userId,
+                checkin_at: date.toISOString(),
+                status: 'present',
+                week_number: weekNumber,
+                class_label: classLabel
+            };
+            saveMockData('attendance', [newRecord, ...attendance]);
+            return;
+        }
+
         const { error } = await supabase
             .rpc('register_attendance_json_v11', {
                 payload: {
@@ -81,6 +103,11 @@ export const adminService = {
      * Get attendance for a specific student (for the admin view)
      */
     async getStudentAttendance(userId: string) {
+        if (isDemoMode()) {
+            const attendance = getMockData('attendance');
+            return attendance.filter((a: any) => a.user_id === userId);
+        }
+
         const { data, error } = await supabase
             .from('student_attendance')
             .select('*')
@@ -95,6 +122,11 @@ export const adminService = {
      * Get saved techniques for a specific student
      */
     async getSavedTechniques(userId: string) {
+        if (isDemoMode()) {
+            const techniques = getMockData('techniques');
+            return techniques.filter((t: any) => t.user_id === userId);
+        }
+
         const { data, error } = await supabase
             .from('saved_techniques')
             .select('*')
@@ -109,6 +141,13 @@ export const adminService = {
      * Remove a specific attendance record
      */
     async removeAttendance(attendanceId: string) {
+        if (isDemoMode()) {
+            const attendance = getMockData('attendance');
+            const filtered = attendance.filter((a: any) => a.id !== attendanceId);
+            saveMockData('attendance', filtered);
+            return;
+        }
+
         const { error } = await supabase
             .from('student_attendance')
             .delete()

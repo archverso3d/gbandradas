@@ -6,6 +6,7 @@ import { CalendarComponent } from '../components/CalendarComponent';
 import { TechniqueVault } from '../components/student/TechniqueVault';
 import { WeeklyCurriculum } from '../components/student/WeeklyCurriculum';
 import { TrainingHistory } from '../components/student/TrainingHistory';
+import { TechniqueHistory } from '../components/student/TechniqueHistory';
 import { LogOut, User as UserIcon, Settings, Calendar, ArrowUp } from 'lucide-react';
 import { adminService } from '../services/admin';
 import { useNotification } from '../context/NotificationContext';
@@ -29,6 +30,7 @@ interface Graduation {
     start_date: string;
     promotion_date?: string;
     next_forecast?: string;
+    student_category?: string;
 }
 
 interface Technique {
@@ -78,31 +80,48 @@ const StudentArea: React.FC = () => {
         }
     }, [user, authLoading, navigate, profile]); // Added profile to dependencies
 
-    const fetchData = async (userId: string) => {
+    const fetchData = async (userId: string, isPeer: boolean = false) => {
         setLoading(true);
         try {
-            // Use profile from auth context for basic info
-            if (profile) {
-                console.log('StudentArea: Setting initial graduation from profile:', profile);
-                setGraduation({
+            // Fetch Profile/Graduation if it's a peer
+            let activeGraduation: Graduation | null = null;
+            let activeStudentCategory: string = 'GB2';
+
+            if (isPeer) {
+                console.log('👥 Fetching peer profile data for:', userId);
+                const { data: profileData, error: profileError } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .single();
+
+                if (profileError) {
+                    console.error('❌ Peer profile fetch error:', profileError);
+                } else if (profileData) {
+                    activeGraduation = {
+                        current_belt: profileData.current_belt || 'Faixa Branca',
+                        degrees: profileData.degrees || 0,
+                        start_date: profileData.start_date || profileData.created_at,
+                        next_forecast: profileData.next_graduation_date,
+                        student_category: profileData.student_category || 'GB2'
+                    };
+                }
+            } else if (profile) {
+                activeGraduation = {
                     current_belt: profile.current_belt || 'Faixa Branca',
                     degrees: profile.degrees || 0,
                     start_date: profile.start_date || (profile as any).created_at,
-                    next_forecast: (profile as any).next_graduation_date
-                });
+                    next_forecast: (profile as any).next_graduation_date,
+                    student_category: profile.student_category || 'GB2'
+                };
             }
 
-            // Fetch Attendance
-            console.log('📅 Fetching attendance for user:', userId);
-            const { data: attData, error: attError } = await supabase
-                .from('student_attendance')
-                .select('*')
-                .eq('user_id', userId);
+            setGraduation(activeGraduation);
 
-            if (attError) {
-                console.error('❌ Attendance fetch error:', attError);
-                notification.alert(`Erro ao carregar presenças: ${attError.message}`, 'Erro');
-            } else if (attData) {
+            // Fetch Attendance
+            console.log(`📅 Fetching attendance for ${isPeer ? 'peer' : 'user'}:`, userId);
+            const attData = await adminService.getStudentAttendance(userId);
+            if (attData) {
                 console.log(`✅ Fetched ${attData.length} attendance records`);
                 const formattedAtt = attData.map((item: any) => {
                     const date = new Date(item.checkin_at);
@@ -115,12 +134,10 @@ const StudentArea: React.FC = () => {
                         weekNumber: getCurrentCurriculumWeek(date)
                     };
                 });
-                console.log('📊 Formatted attendance:', formattedAtt.length, 'records');
                 setAttendance(formattedAtt);
             }
 
-            // Fetch Graduation (History/Details)
-            console.log('🎓 Fetching graduation data for user:', userId);
+            // Fetch Graduation Details (History)
             const { data: gradDataArray, error: gradError } = await supabase
                 .from('student_graduations')
                 .select('*')
@@ -128,19 +145,14 @@ const StudentArea: React.FC = () => {
                 .order('created_at', { ascending: false })
                 .limit(1);
 
-            if (gradError) {
-                console.error('❌ Graduation fetch error:', gradError);
-            } else if (gradDataArray && gradDataArray.length > 0) {
+            if (!gradError && gradDataArray && gradDataArray.length > 0) {
                 const gradData = gradDataArray[0];
-                console.log('✅ Found graduation record:', gradData);
                 setGraduation(prev => ({
-                    ...prev,
+                    ...prev!,
                     ...gradData,
-                    current_belt: gradData.current_belt || profile?.current_belt || prev?.current_belt || 'Faixa Branca',
-                    degrees: gradData.degrees ?? profile?.degrees ?? prev?.degrees ?? 0
+                    current_belt: gradData.current_belt || prev?.current_belt || 'Faixa Branca',
+                    degrees: gradData.degrees ?? prev?.degrees ?? 0
                 }));
-            } else {
-                console.log('ℹ️ No graduation records found, using profile data');
             }
 
             // Fetch Techniques
@@ -154,26 +166,24 @@ const StudentArea: React.FC = () => {
     };
 
     const fetchTechniques = async (userId: string) => {
-        const { data: techData, error } = await supabase
-            .from('saved_techniques')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-
-        if (techData) {
-            setTechniques(techData as Technique[]);
-        } else if (error) {
+        try {
+            const techData = await adminService.getSavedTechniques(userId);
+            if (techData) {
+                setTechniques(techData as Technique[]);
+            }
+        } catch (error) {
             console.error('Error fetching techniques:', error);
         }
     };
 
-    const handleSelectUser = (userId: string, profile: MuralProfile) => {
+    const handleSelectUser = (userId: string, profileSelected: MuralProfile) => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         if (userId === user?.id) {
             setSelectedMuralUser(null);
-            fetchTechniques(user.id);
+            fetchData(user.id, false);
         } else {
-            setSelectedMuralUser(profile);
-            fetchTechniques(userId);
+            setSelectedMuralUser(profileSelected);
+            fetchData(userId, true);
         }
     };
 
@@ -200,8 +210,17 @@ const StudentArea: React.FC = () => {
     };
 
     const handleRemoveAttendance = async (id: string) => {
-        // Students shouldn't remove past attendance, only admins
-        notification.alert('Por favor, solicite a remoção de presença ao seu professor.', 'Ação Restrita');
+        try {
+            setLoading(true);
+            await adminService.removeAttendance(id);
+            if (user) await fetchData(user.id);
+            notification.alert('Presença removida com sucesso.', 'Sucesso');
+        } catch (error: any) {
+            console.error('Error removing attendance:', error);
+            notification.alert(`Erro ao remover presença: ${error.message || 'Erro desconhecido'}`, 'Erro');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleClear = async () => {
@@ -248,6 +267,14 @@ const StudentArea: React.FC = () => {
         console.log('Adding technique (Optimistic):', { ...newTech, id: tempId });
         setTechniques([{ ...newTech, id: tempId } as Technique, ...techniques]);
 
+        if (localStorage.getItem('demo_mode') === 'true') {
+            const saved = JSON.parse(localStorage.getItem('demo_data_techniques') || '[]');
+            const mockTech = { ...newTech, id: tempId, user_id: user.id, created_at: new Date().toISOString() };
+            localStorage.setItem('demo_data_techniques', JSON.stringify([mockTech, ...saved]));
+            setTechniques(prev => prev.map(t => t.id === tempId ? mockTech as any : t));
+            return;
+        }
+
         const { data, error } = await supabase
             .from('saved_techniques')
             .insert([{
@@ -277,6 +304,12 @@ const StudentArea: React.FC = () => {
         const prevTechs = [...techniques];
         setTechniques(techniques.filter(t => t.id !== id));
 
+        if (localStorage.getItem('demo_mode') === 'true') {
+            const saved = JSON.parse(localStorage.getItem('demo_data_techniques') || '[]');
+            localStorage.setItem('demo_data_techniques', JSON.stringify(saved.filter((t: any) => t.id !== id)));
+            return;
+        }
+
         const { error } = await supabase.from('saved_techniques').delete().eq('id', id);
 
         if (error) {
@@ -289,6 +322,13 @@ const StudentArea: React.FC = () => {
         // Optimistic update
         const prevTechs = [...techniques];
         setTechniques(prev => prev.map(t => t.id === id ? { ...t, ...updatedTech } as Technique : t));
+
+        if (localStorage.getItem('demo_mode') === 'true') {
+            const saved = JSON.parse(localStorage.getItem('demo_data_techniques') || '[]');
+            const updated = saved.map((t: any) => t.id === id ? { ...t, ...updatedTech } : t);
+            localStorage.setItem('demo_data_techniques', JSON.stringify(updated));
+            return;
+        }
 
         const { error } = await supabase
             .from('saved_techniques')
@@ -313,7 +353,7 @@ const StudentArea: React.FC = () => {
     };
 
     return (
-        <div className="w-full bg-gray-50 pt-20 sm:pt-24 lg:pt-40 pb-12">
+        <div className="w-full bg-slate-100 dark:bg-slate-950 pt-20 sm:pt-24 lg:pt-32 pb-12 transition-colors duration-500 min-h-screen">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                 {/* Breadcrumb Navigation */}
                 <div className="mb-6">
@@ -331,65 +371,88 @@ const StudentArea: React.FC = () => {
                 />
 
                 {/* Header */}
-                <div className="bg-white shadow-sm rounded-2xl p-3 sm:p-6 mb-8 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center border-2 border-red-50 text-red-600 flex-shrink-0">
+                <div className={`shadow-xl rounded-2xl p-5 sm:p-6 mb-8 border transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden group ${(() => {
+                    const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                    if (belt.includes('white') || belt.includes('branca')) return 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800';
+                    if (belt.includes('blue') || belt.includes('azul')) return 'bg-blue-600 border-blue-500';
+                    if (belt.includes('purple') || belt.includes('roxa')) return 'bg-purple-600 border-purple-500';
+                    if (belt.includes('brown') || belt.includes('marrom')) return 'bg-amber-800 border-amber-700';
+                    if (belt.includes('black') || belt.includes('preta')) return 'bg-slate-900 border-slate-800';
+                    return 'bg-[#0F172A] border-slate-800';
+                })()}`}>
+                    <div className="flex items-center gap-4 sm:gap-5 w-full md:w-auto relative z-10">
+                        <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center border-2 text-slate-400 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-500 overflow-hidden ${(() => {
+                            const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                            if (belt.includes('white') || belt.includes('branca')) return 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700';
+                            return 'bg-white/10 border-white/20';
+                        })()}`}>
                             {user?.user_metadata?.avatar_url ? (
-                                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                <UserIcon className="w-6 h-6 sm:w-8 sm:h-8" />
+                                <UserIcon className="w-7 h-7 sm:w-10 sm:h-10" />
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 tracking-tight truncate">
-                                Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Visitante'}
+                            <h1 className={`text-xl sm:text-3xl font-black italic tracking-tighter truncate drop-shadow-md ${(() => {
+                                const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                if (belt.includes('white') || belt.includes('branca')) return 'text-slate-900 dark:text-slate-100';
+                                return 'text-white';
+                            })()}`}>
+                                {selectedMuralUser ? `Perfil de ${selectedMuralUser.full_name?.split(' ')[0]}` : `Olá, ${user?.user_metadata?.full_name?.split(' ')[0] || 'Visitante'}`}
                             </h1>
-                            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1 sm:gap-3 mt-1">
-                                <p className="text-gray-500 text-xs sm:text-sm font-medium">Bem-vindo à sua área exclusiva</p>
-                                <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase">
-                                    <span className="w-1 h-3 bg-gray-300 rounded-full hidden sm:block"></span>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs ${(() => {
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 mt-1">
+                                <p className={`text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] italic ${(() => {
+                                    const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                    if (belt.includes('white') || belt.includes('branca')) return 'text-slate-500';
+                                    return 'text-white/60';
+                                })()}`}>Bem-vindo à sua área exclusiva</p>
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] font-black uppercase tracking-[0.15em]">
+                                    <span className={`w-1 h-1 rounded-full hidden sm:block ${(() => {
                                         const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                        if (belt.includes('white') || belt.includes('branca')) return 'bg-white border border-gray-200 text-gray-800';
-                                        if (belt.includes('blue') || belt.includes('azul')) return 'bg-blue-600 text-white';
-                                        if (belt.includes('purple') || belt.includes('roxa')) return 'bg-purple-600 text-white';
-                                        if (belt.includes('brown') || belt.includes('marrom')) return 'bg-amber-800 text-white';
-                                        if (belt.includes('black') || belt.includes('preta')) return 'bg-black text-white';
-                                        return 'bg-gray-100 text-gray-800';
-                                    })()
-                                        }`}>
-                                        {graduation?.current_belt || 'Faixa Branca'} {graduation?.degrees !== undefined ? `- ${graduation.degrees}º Grau` : '- 0º Grau'}
+                                        if (belt.includes('white') || belt.includes('branca')) return 'bg-slate-300 dark:bg-slate-700';
+                                        return 'bg-white/30';
+                                    })()}`}></span>
+                                    <span className={`px-3 py-1 rounded-lg transition-all duo-btn-3d ${(() => {
+                                        const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                        if (belt.includes('white') || belt.includes('branca')) return 'bg-white text-slate-800 shadow-[0_3px_0_0_#e2e8f0]';
+                                        if (belt.includes('blue') || belt.includes('azul')) return 'bg-blue-500 text-white shadow-[0_3px_0_0_#1d4ed8]';
+                                        if (belt.includes('purple') || belt.includes('roxa')) return 'bg-purple-500 text-white shadow-[0_3px_0_0_#6d28d9]';
+                                        if (belt.includes('brown') || belt.includes('marrom')) return 'bg-amber-700 text-white shadow-[0_3px_0_0_#78350f]';
+                                        if (belt.includes('black') || belt.includes('preta')) return 'bg-slate-800 text-white shadow-[0_3px_0_0_#1e293b]';
+                                        return 'bg-slate-700 text-white shadow-[0_3px_0_0_#334155]';
+                                    })()}`}>
+                                        {graduation?.current_belt || 'Faixa Branca'} {graduation?.degrees !== undefined ? `${graduation.degrees}º Grau` : '0º Grau'}
                                     </span>
-                                    {graduation?.next_forecast && (
-                                        <span className="text-red-600 flex items-center gap-1 normal-case font-semibold text-[10px] sm:text-xs">
-                                            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                            <span className="hidden sm:inline">Próxima graduação: {new Date(graduation.next_forecast).toLocaleDateString('pt-BR')}</span>
-                                            <span className="sm:hidden">{new Date(graduation.next_forecast).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
-                                        </span>
-                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-100/50 shadow-sm transition-all hover:shadow-md w-full md:w-auto justify-end">
+                    <div className="flex items-center gap-3 relative z-10 w-full md:w-auto justify-end">
                         {isAdmin && (
                             <button
                                 onClick={() => navigate('/admin')}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-600 font-black uppercase text-[10px] tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all min-h-[44px]"
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] italic transition-all duo-btn-3d min-h-[40px] ${(() => {
+                                    const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                    if (belt.includes('white') || belt.includes('branca')) return 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white shadow-[0_3px_0_0_#e2e8f0] dark:shadow-[0_3px_0_0_#0f172a]';
+                                    return 'bg-white/10 text-white hover:bg-white/20 shadow-[0_3px_0_0_rgba(0,0,0,0.2)]';
+                                })()}`}
                                 aria-label="Ir para painel administrativo"
                             >
                                 <Settings className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Admin</span>
+                                <span>Admin</span>
                             </button>
                         )}
                     </div>
+                    {/* Decorative element */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-800/10 -mr-20 -mt-20 rounded-full blur-3xl group-hover:bg-slate-800/20 transition-all duration-700"></div>
                 </div>
 
-                {/* Weekly Curriculum Section */}
-                <WeeklyCurriculum
-                    currentBelt={graduation?.current_belt || 'Faixa Branca'}
-                    defaultWeek={currentWeek}
-                />
+                <div className="mb-6">
+                    <WeeklyCurriculum
+                        currentBelt={graduation?.current_belt || 'Faixa Branca'}
+                        defaultWeek={currentWeek}
+                    />
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column: Graduation & Calendar */}
@@ -401,7 +464,7 @@ const StudentArea: React.FC = () => {
                             onMarkPast={(date) => handleMarkAttendance(date)}
                             onRemoveAttendance={handleRemoveAttendance}
                             onClear={handleClear}
-                            readOnly={true}
+                            readOnly={!!selectedMuralUser}
                             currentWeek={currentWeek}
                         />
 
@@ -409,7 +472,13 @@ const StudentArea: React.FC = () => {
                         <TrainingHistory
                             attendanceData={attendance}
                             studentStartDate={graduation?.start_date || '2024-01-01'}
-                            studentCategory={profile?.student_category || 'GB2'}
+                            studentCategory={graduation?.student_category || 'GB2'}
+                        />
+
+                        {/* Technique History */}
+                        <TechniqueHistory
+                            attendanceData={attendance}
+                            studentCategory={graduation?.student_category || 'GB2'}
                         />
 
                         {/* Graduation Card */}
