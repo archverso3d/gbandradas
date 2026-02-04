@@ -386,8 +386,12 @@ const StudentArea: React.FC = () => {
                             if (belt.includes('white') || belt.includes('branca')) return 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700';
                             return 'bg-white/10 border-white/20';
                         })()}`}>
-                            {user?.user_metadata?.avatar_url ? (
-                                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                            {(selectedMuralUser?.avatar_url || user?.user_metadata?.avatar_url) ? (
+                                <img
+                                    src={selectedMuralUser?.avatar_url || user?.user_metadata?.avatar_url}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
                             ) : (
                                 <UserIcon className="w-7 h-7 sm:w-10 sm:h-10" />
                             )}
