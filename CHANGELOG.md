@@ -1,5 +1,25 @@
 # CHANGELOG - Gracie Barra Andradas
 
+## [0.7.2] - 2026-02-03 22:56 BRT
+
+### 🚀 Deployment & Updates
+
+- **Version 0.7.2 Release**
+- **Fix**: TechniqueVault Tooltip Z-Index & Loading State Protection
+- **Fix**: Robust Streak Calculation (ISO Week Anchor)
+
+---
+
+## [0.7.1] - 2026-02-03 22:50 BRT
+
+### 🚀 Deployment & Updates
+
+- **Version 0.7.1 Release**
+- Critical Bug Fixes: TechniqueVault Tooltip & Training History Streak
+- Full deployment update
+
+---
+
 ## [0.7.0] - 2026-02-03 22:32 BRT
 
 ### 🚀 Deployment & Updates

@@ -499,6 +499,7 @@ const StudentArea: React.FC = () => {
                             onDeleteTechnique={handleDeleteTechnique}
                             readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
                             title={selectedMuralUser ? `Técnicas de ${selectedMuralUser.full_name?.split(' ')[0]}` : "Minhas Técnicas"}
+                            isLoading={loading}
                         />
                     </div>
                 </div>

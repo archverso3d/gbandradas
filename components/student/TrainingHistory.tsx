@@ -87,35 +87,66 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
         // Streak logic - current consecutive weeks back from now
         let streak = 0;
         let stars = 0;
-        let checkDate = new Date();
-        checkDate.setHours(12, 0, 0, 0);
 
         // Loop back up to 52 weeks
+        // We iterate week by week.
+        // We must calculate the "Current Week ID" accurately.
+        const currentY = now.getFullYear();
+        const currentM = String(now.getMonth() + 1).padStart(2, '0');
+        const currentD = String(now.getDate()).padStart(2, '0');
+        const currentWeekId = getYearWeek(`${currentY}-${currentM}-${currentD}`);
+
+        // Helper to get previous week ID
+        const getPreviousWeekId = (wId: string) => {
+            const [y, w] = wId.split('-').map(Number);
+            // Simple decrement
+            let newW = w - 1;
+            let newY = y;
+            if (newW < 1) {
+                newY = y - 1;
+                // Get simplified max weeks - mostly 52, sometimes 53.
+                // For streak approximation, 52 is safe enough or we can compute.
+                // Let's use a Date-based approach for accuracy.
+                // Find date of current week Thursday, subtract 7 days, get week.
+                return ''; // Will be calculated inside loop via Date
+            }
+            return `${newY}-${String(newW).padStart(2, '0')}`;
+        };
+
+        // Use Date Cursor starting from Today
+        let cursorDate = new Date();
+        cursorDate.setHours(12, 0, 0, 0);
+
         for (let i = 0; i < 52; i++) {
-            const y = checkDate.getFullYear();
-            const m = String(checkDate.getMonth() + 1).padStart(2, '0');
-            const d = String(checkDate.getDate()).padStart(2, '0');
+            // Determine week ID for the cursor
+            const y = cursorDate.getFullYear();
+            const m = String(cursorDate.getMonth() + 1).padStart(2, '0');
+            const d = String(cursorDate.getDate()).padStart(2, '0');
             const dateStr = `${y}-${m}-${d}`;
             const weekId = getYearWeek(dateStr);
+
             const classes = weeksMap.get(weekId) || new Set();
 
-            const hasA = classes.has('A');
-            const hasB = classes.has('B');
-            const hasN = classes.has('N');
-
-            if (hasA && hasB) {
+            if (classes.size > 0) {
                 streak++;
-                if (hasN) stars++;
+                const hasA = classes.has('A');
+                const hasB = classes.has('B');
+                const hasN = classes.has('N');
+                if (hasA && hasB && hasN) stars++;
             } else {
-                // If current week (i=0) hasn't hit A&B yet, but might still (week isn't over),
-                // we skip it and check previous weeks. But if it's already a gap in a past week, streak breaks.
+                // If it's the very first iteration (Current Week) and it's empty,
+                // we DON'T break the streak yet. We just ignore this week and continue to look at previous.
+                // Unless today is Sunday?? No, usually current week pending is fine.
                 if (i === 0) {
-                    checkDate.setDate(checkDate.getDate() - 7);
-                    continue;
+                    // Just continue, don't increment streak, effectively "skipping" the current empty week
+                } else {
+                    // Gap found in past weeks -> Streak ends
+                    break;
                 }
-                break;
             }
-            checkDate.setDate(checkDate.getDate() - 7);
+
+            // Move cursor back 7 days
+            cursorDate.setDate(cursorDate.getDate() - 7);
         }
 
         return { completedWeeks: totalClasses, lostWeeks: lostCount, currentStreak: streak, stars, history: [...attendanceData].reverse() };

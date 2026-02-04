@@ -29,6 +29,7 @@ interface TechniqueVaultProps {
     readOnly?: boolean;
     title?: string;
     currentWeek?: number;
+    isLoading?: boolean;
 }
 
 const CATEGORY_COLORS = [
@@ -49,7 +50,8 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
     onDeleteTechnique,
     readOnly = false,
     title = "Minhas Técnicas",
-    currentWeek: propWeek
+    currentWeek: propWeek,
+    isLoading = false
 }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [isManagingCategories, setIsManagingCategories] = useState(false);
@@ -72,10 +74,23 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
     const currentWeekNum = propWeek || getCurrentCurriculumWeek();
 
     useEffect(() => {
+        if (isLoading) return;
+
         const hasSeenOnboarding = localStorage.getItem('technique_vault_onboarding_done');
-        // Show add-tech onboarding if empty
+        let timeoutId: NodeJS.Timeout;
+
+        // Immediately hide if there are techniques
+        if (techniques.length > 0) {
+            setShowOnboarding(false);
+            if (!hasSeenOnboarding) {
+                localStorage.setItem('technique_vault_onboarding_done', 'true');
+            }
+            return;
+        }
+
+        // Show add-tech onboarding if empty and hasn't seen
         if (!hasSeenOnboarding && techniques.length === 0) {
-            setTimeout(() => setShowOnboarding(true), 1200);
+            timeoutId = setTimeout(() => setShowOnboarding(true), 1200);
         }
 
         // Show category onboarding if they open settings and haven't seen it
@@ -85,7 +100,11 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
         } else if (!isManagingCategories) {
             setShowCategoryOnboarding(false);
         }
-    }, [techniques.length, isManagingCategories]);
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+        };
+    }, [techniques.length, isManagingCategories, isLoading]);
 
     const dismissOnboarding = () => {
         setShowOnboarding(false);
@@ -437,7 +456,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
 
     return (
         <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 p-5 sm:p-6 transition-all hover:shadow-2xl relative group">
-            <div className="flex items-center justify-between mb-5 px-1 relative z-10">
+            <div className="flex items-center justify-between mb-5 px-1 relative z-20">
                 <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
                     {title}
                 </h2>
