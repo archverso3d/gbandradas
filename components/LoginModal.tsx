@@ -279,7 +279,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                 required
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
-                                className="w-full border-2 border-gray-100 p-3 outline-none focus:border-red-600 transition-colors"
+                                className="w-full border-2 border-gray-100 p-3 outline-none focus:border-red-600 transition-colors text-gray-900"
                                 placeholder="Seu Nome"
                             />
                         </div>
@@ -295,7 +295,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             ref={emailInputRef}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full border-2 border-gray-100 p-3 sm:p-4 outline-none focus:border-red-600 transition-colors rounded-lg"
+                            className="w-full border-2 border-gray-100 p-3 sm:p-4 outline-none focus:border-red-600 transition-colors rounded-lg text-gray-900"
                             placeholder="seu@email.com ou 'admin'"
                             autoComplete="email"
                             aria-label="Email"
@@ -311,7 +311,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full border-2 border-gray-100 p-3 sm:p-4 outline-none focus:border-red-600 transition-colors rounded-lg"
+                            className="w-full border-2 border-gray-100 p-3 sm:p-4 outline-none focus:border-red-600 transition-colors rounded-lg text-gray-900"
                             placeholder="••••••••"
                             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                             aria-label="Senha"
@@ -328,7 +328,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                 required
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full border-2 border-gray-100 p-3 outline-none focus:border-red-600 transition-colors"
+                                className="w-full border-2 border-gray-100 p-3 outline-none focus:border-red-600 transition-colors text-gray-900"
                                 placeholder="••••••••"
                             />
                         </div>

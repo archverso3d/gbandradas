@@ -97,19 +97,19 @@ export const StudentMural: React.FC<StudentMuralProps> = ({
         <div className="space-y-12 pb-10">
             {/* Summary Stat */}
             <div className="flex gap-4 mb-4">
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 flex-grow">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total de Alunos</p>
-                    <p className="text-2xl font-black text-slate-900 italic">{students.length}</p>
+                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl px-6 py-4 flex-grow">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total de Alunos</p>
+                    <p className="text-2xl font-black text-slate-900 dark:text-slate-100 italic">{students.length}</p>
                 </div>
-                <div className="bg-red-50 border border-red-100 rounded-2xl px-6 py-4 flex-grow">
-                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Novos (Sem Categoria)</p>
-                    <p className="text-2xl font-black text-red-600 italic">{uncategorized.length}</p>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl px-6 py-4 flex-grow">
+                    <p className="text-[10px] font-black text-red-400 dark:text-red-400 uppercase tracking-widest mb-1">Novos (Sem Categoria)</p>
+                    <p className="text-2xl font-black text-red-600 dark:text-red-500 italic">{uncategorized.length}</p>
                 </div>
             </div>
 
             {/* Uncategorized (Prioritized) */}
             {uncategorized.length > 0 && (
-                <div className="bg-red-50/30 rounded-[2.5rem] p-6 border border-red-100/50">
+                <div className="bg-red-50/30 dark:bg-red-900/10 rounded-[2.5rem] p-6 border border-red-100/50 dark:border-red-900/20">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="bg-red-600 px-3 py-1.5 rounded-lg transform -rotate-1 shadow-md shadow-red-100">
                             <h3 className="text-white font-black text-xs italic uppercase tracking-tighter">Novos Alunos (Pendente)</h3>
@@ -132,7 +132,7 @@ export const StudentMural: React.FC<StudentMuralProps> = ({
             )}
 
             {/* GB K Group Section */}
-            <div className="bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100">
+            <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800">
                 <button
                     onClick={() => toggleSection('kids')}
                     className="w-full flex items-center justify-between group mb-8 focus:outline-none"
@@ -142,8 +142,8 @@ export const StudentMural: React.FC<StudentMuralProps> = ({
                             <span className="text-white font-black text-xl italic tracking-tighter">GB<span className="text-green-500">K</span></span>
                         </div>
                         <div className="text-left">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter group-hover:text-red-600 transition-colors">Programa Kids</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 uppercase italic tracking-tighter group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">Programa Kids</h2>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                                 {getStudentsByCategories(GB_K_SUBTYPES).length} Alunos Matriculados
                             </p>
                         </div>
@@ -159,7 +159,7 @@ export const StudentMural: React.FC<StudentMuralProps> = ({
             </div>
 
             {/* Standalone Categories (GB1, GB2, GB F) */}
-            <div className="bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100">
+            <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800">
                 <button
                     onClick={() => toggleSection('adults')}
                     className="w-full flex items-center justify-between group mb-8 focus:outline-none"
@@ -169,8 +169,8 @@ export const StudentMural: React.FC<StudentMuralProps> = ({
                             <span className="text-white font-black text-xl italic tracking-tighter">GB</span>
                         </div>
                         <div className="text-left">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter group-hover:text-red-600 transition-colors">Programas de Adultos</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 uppercase italic tracking-tighter group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">Programas de Adultos</h2>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                                 {getStudentsByCategories(STANDALONE_CATEGORIES).length} Alunos Matriculados
                             </p>
                         </div>
@@ -223,19 +223,19 @@ const MuralCard: React.FC<{
 
             <button
                 onClick={onClick}
-                className={`w-full text-left bg-white rounded-2xl p-3 shadow-sm border transition-all duration-300 ${isSelected
-                    ? 'border-red-500 ring-2 ring-red-100 shadow-red-100'
-                    : 'border-slate-100 hover:shadow-md hover:border-red-100'
+                className={`w-full text-left bg-white dark:bg-slate-900 rounded-2xl p-3 shadow-sm border transition-all duration-300 ${isSelected
+                    ? 'border-red-500 ring-2 ring-red-100 dark:ring-red-900/30 shadow-red-100 dark:shadow-none'
+                    : 'border-slate-100 dark:border-slate-800 hover:shadow-md hover:border-red-100 dark:hover:border-red-900/50'
                     }`}
             >
                 <div className="relative mb-3">
-                    <div className={`aspect-square rounded-xl bg-slate-50 overflow-hidden border-2 relative transition-colors ${isSelected ? 'border-red-500' : 'border-slate-50'
+                    <div className={`aspect-square rounded-xl bg-slate-50 dark:bg-slate-800 overflow-hidden border-2 relative transition-colors ${isSelected ? 'border-red-500' : 'border-slate-50 dark:border-slate-800'
                         }`}>
                         {student.avatar_url ? (
                             <img src={student.avatar_url} alt="" className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-500" />
                         ) : (
                             <div className="flex items-center justify-center h-full opacity-10">
-                                <User className="w-8 h-8 text-slate-400" />
+                                <User className="w-8 h-8 text-slate-400 dark:text-slate-500" />
                             </div>
                         )}
                     </div>
@@ -246,10 +246,10 @@ const MuralCard: React.FC<{
                         ))}
                     </div>
                 </div>
-                <h4 className="font-black text-slate-900 uppercase italic tracking-tighter truncate text-[11px] mb-0.5 leading-none">
+                <h4 className="font-black text-slate-900 dark:text-slate-100 uppercase italic tracking-tighter truncate text-[11px] mb-0.5 leading-none">
                     {student.full_name || 'Guerreiro'}
                 </h4>
-                <p className="text-[10px] font-bold text-slate-400 truncate mb-1">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate mb-1">
                     {student.email || 'E-mail não informado'}
                 </p>
                 <p className="text-[8px] font-black text-red-600 uppercase tracking-widest">{student.current_belt}</p>

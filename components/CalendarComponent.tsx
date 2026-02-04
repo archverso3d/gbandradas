@@ -87,8 +87,9 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
 
     // Helper to check if a record counts as presence
     const isPresentStatus = (status: string) => {
-        const s = status?.toLowerCase();
-        return s === 'present' || s === 'presente' || s === 'a' || s === 'p';
+        if (!status) return false;
+        const s = status.toLowerCase().trim();
+        return ['present', 'presente', 'a', 'b', 'n', 'p', 'confirmed', 'checkin'].includes(s);
     };
 
     const isTodayMarked = attendanceData.some(a => a.date === todayStr && isPresentStatus(a.status));
@@ -223,20 +224,20 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
                         if (isPresent) {
                             textClass = 'text-white';
                             if (record.classLabel === 'A') {
-                                bgClass = 'bg-blue-600';
-                                borderClass = 'border-b-4 border-blue-800 shadow-lg shadow-blue-500/20';
+                                bgClass = 'bg-blue-600 dark:bg-blue-700';
+                                borderClass = 'border-b-4 border-blue-800 dark:border-blue-900 shadow-lg shadow-blue-500/20';
                             }
                             else if (record.classLabel === 'B') {
-                                bgClass = 'bg-purple-600';
-                                borderClass = 'border-b-4 border-purple-800 shadow-lg shadow-purple-500/20';
+                                bgClass = 'bg-purple-600 dark:bg-purple-700';
+                                borderClass = 'border-b-4 border-purple-800 dark:border-purple-900 shadow-lg shadow-purple-500/20';
                             }
                             else if (record.classLabel === 'N') {
-                                bgClass = 'bg-red-600';
-                                borderClass = 'border-b-4 border-red-800 shadow-lg shadow-red-500/20';
+                                bgClass = 'bg-red-600 dark:bg-red-700';
+                                borderClass = 'border-b-4 border-red-800 dark:border-red-900 shadow-lg shadow-red-500/20';
                             }
                             else {
-                                bgClass = 'bg-orange-500';
-                                borderClass = 'border-b-4 border-orange-700 shadow-lg shadow-orange-500/20';
+                                bgClass = 'bg-orange-500 dark:bg-orange-600';
+                                borderClass = 'border-b-4 border-orange-700 dark:border-orange-900 shadow-lg shadow-orange-500/20';
                             }
                         } else if (isPending) {
                             bgClass = 'bg-emerald-500';

@@ -71,10 +71,10 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
 
     if (loading) {
         return (
-            <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100">
+            <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] p-6 border border-slate-100 dark:border-slate-800">
                 <div className="animate-pulse space-y-3">
-                    <div className="h-3 bg-slate-50 rounded w-1/4"></div>
-                    <div className="h-32 bg-slate-50/50 rounded-xl border border-slate-100/50"></div>
+                    <div className="h-3 bg-slate-50 dark:bg-slate-800 rounded w-1/4"></div>
+                    <div className="h-32 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-100/50 dark:border-slate-800/50"></div>
                 </div>
             </div>
         );
@@ -107,9 +107,9 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                 onClear={handleClear}
             />
             {/* Training History List */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-2">
-                <div className="p-4 border-b border-slate-50 bg-slate-50/30">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em] italic flex items-center justify-between">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mt-2">
+                <div className="p-4 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
+                    <h3 className="text-xs font-black text-slate-900 dark:text-slate-200 uppercase tracking-[0.15em] italic flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Clock className="w-3.5 h-3.5 text-slate-400" />
                             Histórico de Treinos
@@ -118,7 +118,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                 </div>
                 <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                     {attendance.length > 0 ? (
-                        <div className="divide-y divide-slate-50">
+                        <div className="divide-y divide-slate-50 dark:divide-slate-800">
                             {/* Sort by date desc (already sorted from DB usually, but ensuring) */}
                             {[...attendance].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record: any) => {
                                 const dateObj = new Date(record.date + 'T12:00:00'); // Safe mid-day to avoid timezone offset issues on display
@@ -130,7 +130,7 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                                 if (!classType) classType = 'Treino';
 
                                 return (
-                                    <div key={record.id} className="p-3 hover:bg-slate-50 transition-colors flex items-center justify-between group">
+                                    <div key={record.id} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between group">
                                         <div className="flex items-center gap-3">
                                             <div className={`
                                                 w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-black border uppercase
@@ -145,10 +145,10 @@ export const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                                                 {studentCategory || (classType === 'No-Gi' ? 'NG' : 'GB')}
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-bold text-slate-900 uppercase">
+                                                <p className="text-[11px] font-bold text-slate-900 dark:text-slate-200 uppercase">
                                                     {record.week_number ? `SEMANA ${record.week_number} - ` : ''} AULA {record.classLabel || '?'} - {dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
                                                 </p>
-                                                <p className="text-[9px] font-bold text-slate-400">
+                                                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500">
                                                     {dateObj.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric' })}
                                                 </p>
                                             </div>

@@ -52,10 +52,10 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="pt-12 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 uppercase tracking-widest font-bold">
-          <p>&copy; 2024 Gracie Barra Andradas. Todos os direitos reservados.</p>
+          <p>&copy; 2026 Gracie Barra Andradas. Todos os direitos reservados.</p>
           <div className="flex flex-col items-center md:items-end gap-2 mt-4 md:mt-0">
             <p>Desenvolvido com excelência GB</p>
-            <p className="text-[10px] text-gray-600 font-medium lowercase italic">v0.7.2 - 03/02/2026 - 22:56</p>
+            <p className="text-[10px] text-gray-600 font-medium lowercase italic">v0.7.3 - 03/02/2026 - 23:30</p>
           </div>
         </div>
       </div>

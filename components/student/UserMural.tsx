@@ -132,23 +132,23 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
     if (users.length === 0) return null;
 
     return (
-        <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 p-6 mb-10 transition-all hover:shadow-2xl">
-            <div className="flex items-center justify-between mb-8 px-1">
-                <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
-                    <Users className="w-4 h-4 text-blue-600" />
+        <div className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 mb-6 transition-all hover:shadow-md">
+            <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
+                    <Users className="w-3.5 h-3.5 text-blue-600" />
                     Comunidade
                 </h3>
-                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] italic bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] italic bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700/50">
                     {users.length} Alunos
                 </span>
             </div>
 
             <div className="relative">
                 {/* Scroll Fade Effects */}
-                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none md:hidden"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none md:hidden"></div>
+                <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none md:hidden"></div>
+                <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none md:hidden"></div>
 
-                <div className="flex gap-5 overflow-x-auto pb-8 pt-6 px-4 scrollbar-hide snap-x scroll-pl-4">
+                <div className="flex gap-4 overflow-x-auto pb-6 pt-4 px-4 scrollbar-hide snap-x scroll-pl-4">
                     {users.map((profile) => {
                         const isSelected = selectedUserId === profile.user_id;
                         const isMe = currentUserId === profile.user_id;
@@ -158,14 +158,14 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
                             <div
                                 key={profile.user_id}
                                 onClick={() => onSelectUser(profile.user_id, profile)}
-                                className={`flex flex-col items-center gap-3 cursor-pointer group min-w-[70px] snap-center transition-all duration-300 ${isSelected ? 'scale-105 -translate-y-1' : 'opacity-60 hover:opacity-100 hover:-translate-y-1'}`}
+                                className={`flex flex-col items-center gap-2 cursor-pointer group min-w-[60px] snap-center transition-all duration-300 ${isSelected ? 'scale-105 -translate-y-0.5' : 'opacity-60 hover:opacity-100 hover:-translate-y-0.5'}`}
                             >
-                                <div className={`relative transition-all duration-300 ${isSelected ? 'drop-shadow-xl' : 'drop-shadow-sm group-hover:drop-shadow-md'}`}>
+                                <div className={`relative transition-all duration-300 ${isSelected ? 'drop-shadow-md' : 'drop-shadow-sm group-hover:drop-shadow-md'}`}>
                                     {/* Outline Ring */}
                                     <div className={`absolute -inset-1 rounded-full border-2 ${isSelected ? 'border-red-500 scale-110' : 'border-transparent group-hover:border-slate-200'} transition-all duration-300`}></div>
 
                                     {/* Avatar Container */}
-                                    <div className={`w-16 h-16 rounded-full border-[3px] ${colors.border} p-0.5 bg-white overflow-hidden relative z-0`}>
+                                    <div className={`w-12 h-12 rounded-full border-2 ${colors.border} p-0.5 bg-white overflow-hidden relative z-0`}>
                                         {profile.avatar_url ? (
                                             <img
                                                 src={profile.avatar_url}
@@ -174,7 +174,7 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
                                             />
                                         ) : (
                                             <div className="w-full h-full bg-slate-50 flex items-center justify-center text-slate-300">
-                                                <UserIcon className="w-8 h-8" />
+                                                <UserIcon className="w-6 h-6" />
                                             </div>
                                         )}
                                     </div>
@@ -194,11 +194,11 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
                                 </div>
 
                                 <div className="text-center transition-all">
-                                    <p className={`text-xs font-bold truncate max-w-[80px] ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
+                                    <p className={`text-[10px] font-bold truncate max-w-[64px] ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
                                         {profile.full_name?.split(' ')[0] || 'Aluno'}
                                     </p>
-                                    <p className={`text-[9px] font-bold uppercase tracking-wider ${colors.text} opacity-80 whitespace-nowrap`}>
-                                        {formatBeltName(profile.current_belt)}
+                                    <p className={`text-[8px] font-bold uppercase tracking-wider ${colors.text} opacity-80 whitespace-nowrap`}>
+                                        {formatBeltName(profile.current_belt).replace('Faixa ', '')}
                                     </p>
                                 </div>
                             </div>

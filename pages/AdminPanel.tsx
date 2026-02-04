@@ -119,11 +119,7 @@ const AdminPanel: React.FC = () => {
         try {
             // Determine class label based on day of week
             const targetDate = date || new Date();
-            const dayOfWeek = targetDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
-            let classLabel = 'A';
-            if (dayOfWeek === 3 || dayOfWeek === 4) classLabel = 'B'; // Wed, Thu -> B
-            if (dayOfWeek === 5 || dayOfWeek === 6) classLabel = 'N'; // Fri, Sat -> No-Gi
 
             await adminService.markAttendance(
                 selectedStudent.user_id,

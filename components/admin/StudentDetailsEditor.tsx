@@ -107,16 +107,16 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
             {/* Left Column: Attendance & Actions */}
             <div className="lg:col-span-5 space-y-6">
                 {/* Quick Action: Mark Presence */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50/50 rounded-full -mr-12 -mt-12 blur-2xl opacity-50" />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 relative overflow-hidden transition-colors">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-full -mr-12 -mt-12 blur-2xl opacity-50" />
                     <div className="relative z-10 flex flex-col gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-emerald-50 rounded-xl">
+                            <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black text-slate-900 uppercase italic">Registro Rápido</h3>
-                                <p className="text-[10px] text-slate-400 font-medium">Marcar presença para aula de hoje</p>
+                                <h3 className="text-sm font-black text-slate-900 dark:text-emerald-400 uppercase italic">Registro Rápido</h3>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Marcar presença para aula de hoje</p>
                             </div>
                         </div>
                         <button
@@ -138,13 +138,13 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                 />
 
                 {/* Saved Techniques View (Collapsible) */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors">
                     <button
                         onClick={() => setShowTechniques(!showTechniques)}
-                        className="w-full p-5 bg-slate-50/30 hover:bg-slate-50 transition-colors flex items-center justify-between"
+                        className="w-full p-5 bg-slate-50/30 dark:bg-slate-800/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between"
                     >
                         <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-white rounded-lg shadow-sm border border-slate-100">
+                            <div className="p-1.5 bg-white dark:bg-slate-950 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
                                 <Video className="w-4 h-4 text-blue-600" />
                             </div>
                             <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em] italic">Técnicas Salvas</h3>
@@ -157,7 +157,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                     </button>
 
                     {showTechniques && (
-                        <div className="p-4 border-t border-slate-50 animate-in slide-in-from-top-2">
+                        <div className="p-4 border-t border-slate-50 dark:border-slate-800 animate-in slide-in-from-top-2">
                             {loadingTechs ? (
                                 <div className="flex justify-center p-4">
                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -170,20 +170,20 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                                             href={tech.link}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="group flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden hover:border-blue-200 transition-all p-2"
+                                            className="group flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:border-blue-200 dark:hover:border-blue-800 transition-all p-2"
                                         >
-                                            <div className="w-16 h-10 bg-slate-200 relative flex items-center justify-center rounded-lg shrink-0">
+                                            <div className="w-16 h-10 bg-slate-200 dark:bg-slate-700 relative flex items-center justify-center rounded-lg shrink-0">
                                                 <Play className="w-4 h-4 text-white/50 group-hover:text-white transition-all" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{tech.title}</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">{tech.category || 'Geral'}</p>
+                                                <p className="text-[10px] font-black text-slate-900 dark:text-slate-200 uppercase italic truncate">{tech.title}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight truncate">{tech.category || 'Geral'}</p>
                                             </div>
                                         </a>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                <div className="text-center py-6 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
                                     <p className="text-slate-400 text-[10px] font-medium italic">Nenhuma técnica salva.</p>
                                 </div>
                             )}
@@ -195,20 +195,20 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
             {/* Right Column: Profile & Details */}
             <div className="lg:col-span-7 space-y-6">
                 {/* Profile Info */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/50 rounded-full -mr-16 -mt-16 blur-2xl opacity-50" />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 relative overflow-hidden transition-colors">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/50 dark:bg-red-900/10 rounded-full -mr-16 -mt-16 blur-2xl opacity-50" />
 
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-50 to-white border-2 border-white flex items-center justify-center overflow-hidden shadow-lg shadow-slate-200/50 shrink-0">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-700 border-2 border-white dark:border-slate-600 flex items-center justify-center overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-black/30 shrink-0">
                             {student.avatar_url ? (
                                 <img src={student.avatar_url} alt="" className="w-full h-full object-cover object-top" />
                             ) : (
-                                <User className="w-10 h-10 text-slate-200" />
+                                <User className="w-10 h-10 text-slate-200 dark:text-slate-500" />
                             )}
                         </div>
                         <div className="flex-1 min-w-0 space-y-3">
                             <div>
-                                <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1">
+                                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none mb-1">
                                     {student.full_name}
                                 </h2>
                                 <div className="flex items-center gap-2">
@@ -237,12 +237,12 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                             </div>
 
                             <div className="flex flex-wrap gap-4 pt-1">
-                                <div className="flex items-center gap-2 text-slate-500 text-xs font-bold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-bold bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700">
                                     <Mail className="w-3.5 h-3.5 text-slate-400" />
                                     <span className="truncate max-w-[200px]">{student.email}</span>
                                 </div>
                                 {student.phone && (
-                                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-bold bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700">
                                         <Phone className="w-3.5 h-3.5 text-slate-400" />
                                         <span>{student.phone}</span>
                                     </div>
@@ -254,14 +254,14 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
 
 
 
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="p-6 border-b border-slate-50 bg-slate-50/40 flex items-center justify-between">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors">
+                    <div className="p-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/40 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                            <div className="p-2 bg-white dark:bg-slate-950 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
                                 <Award className="w-5 h-5 text-red-600" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider italic">Graduação & Evolução</h3>
+                                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider italic">Graduação & Evolução</h3>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Gestão de progresso técnico</p>
                             </div>
                         </div>
@@ -272,7 +272,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                             {/* Main Progression Group */}
                             <div className="space-y-6">
                                 {/* Belt & Degrees Section */}
-                                <div className="space-y-4 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+                                <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-slate-200/20 rounded-full -mr-16 -mt-16 blur-3xl" />
 
                                     <div className="flex items-center justify-between relative z-10">
@@ -298,7 +298,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                                                             h-10 rounded-xl border-2 transition-all relative overflow-hidden group/btn
                                                             ${student.current_belt === b.id
                                                                 ? 'border-red-500 scale-105 shadow-lg shadow-red-100'
-                                                                : 'border-white hover:border-slate-200'
+                                                                : 'border-white dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
                                                             }
                                                         `}
                                                         style={{ backgroundColor: b.color }}
@@ -315,7 +315,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
 
                                         <div className="space-y-3">
                                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block ml-1">Graus (Stripes) na Ponta</span>
-                                            <div className="flex bg-white/80 backdrop-blur-sm p-1.5 rounded-2xl gap-1 border border-slate-100 shadow-inner">
+                                            <div className="flex bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm p-1.5 rounded-2xl gap-1 border border-slate-100 dark:border-slate-700 shadow-inner">
                                                 {[0, 1, 2, 3, 4].map((d) => (
                                                     <button
                                                         key={d}
@@ -325,7 +325,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                                                             flex-1 py-3 rounded-xl font-black text-xs transition-all relative
                                                             ${student.degrees === d
                                                                 ? 'bg-red-600 text-white shadow-lg shadow-red-200 -translate-y-0.5'
-                                                                : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'
+                                                                : 'text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                                             }
                                                         `}
                                                     >
@@ -355,7 +355,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                                                         px-4 py-2.5 rounded-xl font-black text-[10px] border transition-all uppercase tracking-widest
                                                         ${isSelected
                                                             ? 'bg-slate-900 border-slate-900 text-white shadow-lg -translate-y-0.5'
-                                                            : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200 hover:bg-slate-50'
+                                                            : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900'
                                                         }
                                                     `}
                                                 >
@@ -369,7 +369,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
 
                             {/* Timeline Group */}
                             <div className="space-y-6">
-                                <div className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 space-y-6">
+                                <div className="p-5 bg-slate-50/50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-6">
                                     {/* Start Date */}
                                     <div className="space-y-3">
                                         <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Data de Início (Carreira)</label>
@@ -377,7 +377,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                                             <Play className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-red-500 transition-colors" />
                                             <input
                                                 type="date"
-                                                className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-white bg-white focus:ring-4 focus:ring-red-50/30 focus:border-red-500 outline-none font-bold text-slate-700 transition-all shadow-sm text-sm"
+                                                className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-white dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-4 focus:ring-red-50/30 focus:border-red-500 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm text-sm"
                                                 value={student.start_date || ''}
                                                 onChange={(e) => onUpdate({ start_date: e.target.value })}
                                             />
@@ -391,7 +391,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                                             <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-red-500 transition-colors" />
                                             <input
                                                 type="date"
-                                                className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-white bg-white focus:ring-4 focus:ring-red-50/30 focus:border-red-500 outline-none font-bold text-slate-700 transition-all shadow-sm text-sm"
+                                                className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-white dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-4 focus:ring-red-50/30 focus:border-red-500 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm text-sm"
                                                 value={student.next_graduation_date || ''}
                                                 onChange={(e) => onUpdate({ next_graduation_date: e.target.value })}
                                             />
@@ -401,7 +401,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-50">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-50 dark:border-slate-800">
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em] italic text-center sm:text-left">
                                 * Verifique todas as informações antes de salvar o prontuário do aluno.
                             </p>
