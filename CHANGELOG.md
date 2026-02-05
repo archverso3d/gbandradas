@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # CHANGELOG - Gracie Barra Andradas
 
 ## [0.7.2] - 2026-02-03 22:56 BRT
@@ -29,6 +30,8 @@
 - Updated version, date, and time metadata
 
 ---
+
+## [0.5.0] - 2026-01-2x (Estimated)
 
 ### 🚀 Deployment & Updates
 
