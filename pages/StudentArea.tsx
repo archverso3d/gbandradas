@@ -203,7 +203,7 @@ const StudentArea: React.FC = () => {
             await fetchData(user.id);
         } catch (error) {
             console.error('Error marking self attendance:', error);
-            notification.alert('Não foi possível registrar sua presença agora.', 'Erro');
+            notification.alert(`Erro detalhado: ${(error as any).message || JSON.stringify(error)}`, 'Erro de Sistema');
         } finally {
             setLoading(false);
         }
