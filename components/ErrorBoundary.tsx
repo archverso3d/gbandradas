@@ -22,7 +22,7 @@ class ErrorBoundary extends React.Component<Props, State> {
         return { hasError: true, error, errorInfo: null };
     }
 
-    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    public componentDidCatch(error: Error, errorInfo: any) {
         console.error("Uncaught error:", error, errorInfo);
         this.setState({ error, errorInfo });
     }

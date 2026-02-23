@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Clock, Trash2, Plus, X } from 'lucide-react';
+import { InstructionBalloon } from './ui/InstructionBalloon';
 
 export interface AttendanceRecord {
     id: string;
@@ -40,6 +41,7 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
     // New state for confirmation balloon
     const [pendingDate, setPendingDate] = useState<Date | null>(null);
     const [pendingDeleteDate, setPendingDeleteDate] = useState<string | null>(null);
+    const [isGuideDismissed, setIsGuideDismissed] = useState(false);
 
     const currentMonth = viewDate.getMonth();
     const currentYear = viewDate.getFullYear();
@@ -98,6 +100,9 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
         const d = new Date(a.date + 'T00:00:00');
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear && isPresentStatus(a.status);
     }).map(a => a.date)).size;
+
+    const hasRecordedAttendance = attendanceData.some(a => isPresentStatus(a.status));
+    const isStudentNotAdmin = !readOnly && !isAdmin;
 
     const handleDayClick = (day: number) => {
         if (readOnly) return;
@@ -206,132 +211,153 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
                 </div>
 
                 {/* Days Grid (Even more compact) */}
-                <div className="grid grid-cols-7 gap-2">
-                    {blanks.map((_, i) => (
-                        <div key={`blank-${i}`} className="aspect-square"></div>
-                    ))}
+                <div className="relative">
+                    {isStudentNotAdmin && !hasRecordedAttendance && (
+                        <InstructionBalloon
+                            id="calendar-past-days"
+                            text="Toque nos dias para registrar treinos passados."
+                            position="top"
+                        />
+                    )}
+                    <div className="grid grid-cols-7 gap-2 relative z-0">
+                        {blanks.map((_, i) => (
+                            <div key={`blank-${i}`} className="aspect-square"></div>
+                        ))}
 
-                    {days.map(day => {
-                        const record = getStatusForDay(day);
-                        const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
-                        const isPresent = record && isPresentStatus(record.status);
-                        const isPending = pendingDate?.getDate() === day && pendingDate?.getMonth() === currentMonth;
+                        {days.map(day => {
+                            const record = getStatusForDay(day);
+                            const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+                            const isPresent = record && isPresentStatus(record.status);
+                            const isPending = pendingDate?.getDate() === day && pendingDate?.getMonth() === currentMonth;
 
-                        let bgClass = '';
-                        let textClass = '';
-                        let borderClass = '';
+                            let bgClass = '';
+                            let textClass = '';
+                            let borderClass = '';
 
-                        if (isPresent) {
-                            textClass = 'text-white';
-                            if (record.classLabel === 'A') {
-                                bgClass = 'bg-blue-600 dark:bg-blue-700';
-                                borderClass = 'border-b-4 border-blue-800 dark:border-blue-900 shadow-lg shadow-blue-500/20';
+                            if (isPresent) {
+                                textClass = 'text-white';
+                                if (record.classLabel === 'A') {
+                                    bgClass = 'bg-blue-600 dark:bg-blue-700';
+                                    borderClass = 'border-b-4 border-blue-800 dark:border-blue-900 shadow-lg shadow-blue-500/20';
+                                }
+                                else if (record.classLabel === 'B') {
+                                    bgClass = 'bg-purple-600 dark:bg-purple-700';
+                                    borderClass = 'border-b-4 border-purple-800 dark:border-purple-900 shadow-lg shadow-purple-500/20';
+                                }
+                                else if (record.classLabel === 'N') {
+                                    bgClass = 'bg-red-600 dark:bg-red-700';
+                                    borderClass = 'border-b-4 border-red-800 dark:border-red-900 shadow-lg shadow-red-500/20';
+                                }
+                                else {
+                                    bgClass = 'bg-orange-500 dark:bg-orange-600';
+                                    borderClass = 'border-b-4 border-orange-700 dark:border-orange-900 shadow-lg shadow-orange-500/20';
+                                }
+                            } else if (isPending) {
+                                bgClass = 'bg-emerald-500';
+                                textClass = 'text-white';
+                                borderClass = 'border-b-4 border-emerald-700 shadow-lg shadow-emerald-500/20';
+                            } else if (isToday) {
+                                bgClass = 'bg-white dark:bg-slate-800';
+                                textClass = 'text-blue-600 dark:text-blue-400 font-black';
+                                borderClass = 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900 rounded-2xl';
+                            } else {
+                                textClass = 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-2xl transition-all';
                             }
-                            else if (record.classLabel === 'B') {
-                                bgClass = 'bg-purple-600 dark:bg-purple-700';
-                                borderClass = 'border-b-4 border-purple-800 dark:border-purple-900 shadow-lg shadow-purple-500/20';
-                            }
-                            else if (record.classLabel === 'N') {
-                                bgClass = 'bg-red-600 dark:bg-red-700';
-                                borderClass = 'border-b-4 border-red-800 dark:border-red-900 shadow-lg shadow-red-500/20';
-                            }
-                            else {
-                                bgClass = 'bg-orange-500 dark:bg-orange-600';
-                                borderClass = 'border-b-4 border-orange-700 dark:border-orange-900 shadow-lg shadow-orange-500/20';
-                            }
-                        } else if (isPending) {
-                            bgClass = 'bg-emerald-500';
-                            textClass = 'text-white';
-                            borderClass = 'border-b-4 border-emerald-700 shadow-lg shadow-emerald-500/20';
-                        } else if (isToday) {
-                            bgClass = 'bg-white dark:bg-slate-800';
-                            textClass = 'text-blue-600 dark:text-blue-400 font-black';
-                            borderClass = 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900 rounded-2xl';
-                        } else {
-                            textClass = 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-2xl transition-all';
-                        }
 
-                        return (
-                            <button
-                                key={`day-${day}`}
-                                disabled={!isAdmin && readOnly}
-                                onClick={() => handleDayClick(day)}
-                                className={`aspect-square flex items-center justify-center relative group disabled:cursor-default transition-all active:scale-95`}
-                            >
-                                <div
-                                    className={`
+                            return (
+                                <button
+                                    key={`day-${day}`}
+                                    disabled={!isAdmin && readOnly}
+                                    onClick={() => handleDayClick(day)}
+                                    className={`aspect-square flex items-center justify-center relative group disabled:cursor-default transition-all active:scale-95`}
+                                >
+                                    <div
+                                        className={`
                                         w-10 h-10 flex items-center justify-center rounded-2xl text-sm font-black transition-all relative
                                         ${bgClass} ${textClass} ${borderClass}
                                         ${!isPresent && !isPending && !isToday ? '' : ''}
                                     `}
-                                >
-                                    {day}
-                                </div>
+                                    >
+                                        {day}
+                                    </div>
 
-                                {/* Confirmation Balloon for ADD */}
-                                {isPending && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in zoom-in duration-200">
-                                        <div className="bg-slate-900 dark:bg-slate-800 text-white text-[11px] py-2 px-4 rounded-xl shadow-2xl border-b-4 border-slate-950 flex items-center gap-3 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-slate-900 dark:after:border-t-slate-800">
-                                            <span className="font-black italic">CONFIRMAR?</span>
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    confirmAddAttendance();
-                                                }}
-                                                className="bg-emerald-500 p-1 rounded-full hover:bg-emerald-400 border-b-2 border-emerald-700 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
-                                            >
-                                                <CheckCircle2 className="w-4 h-4 text-white" />
-                                            </div>
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setPendingDate(null);
-                                                }}
-                                                className="bg-slate-700 p-1 rounded-full hover:bg-slate-600 border-b-2 border-slate-900 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
-                                            >
-                                                <X className="w-4 h-4 text-white" />
+                                    {/* Confirmation Balloon for ADD */}
+                                    {isPending && (
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in zoom-in duration-200">
+                                            <div className="bg-slate-900 dark:bg-slate-800 text-white text-[11px] py-2 px-4 rounded-xl shadow-2xl border-b-4 border-slate-950 flex items-center gap-3 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-slate-900 dark:after:border-t-slate-800">
+                                                <span className="font-black italic">CONFIRMAR?</span>
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        confirmAddAttendance();
+                                                    }}
+                                                    className="bg-emerald-500 p-1 rounded-full hover:bg-emerald-400 border-b-2 border-emerald-700 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4 text-white" />
+                                                </div>
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPendingDate(null);
+                                                    }}
+                                                    className="bg-slate-700 p-1 rounded-full hover:bg-slate-600 border-b-2 border-slate-900 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
+                                                >
+                                                    <X className="w-4 h-4 text-white" />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Confirmation Balloon for DELETE */}
-                                {record && pendingDeleteDate === record.id && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in zoom-in duration-200">
-                                        <div className="bg-red-600 text-white text-[11px] py-2 px-4 rounded-xl shadow-2xl border-b-4 border-red-800 flex items-center gap-3 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-red-600">
-                                            <span className="font-black italic text-xs">EXCLUIR TREINO?</span>
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    confirmDeleteAttendance();
-                                                }}
-                                                className="bg-white p-1 rounded-full hover:bg-red-50 border-b-2 border-red-200 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
-                                            >
-                                                <Trash2 className="w-4 h-4 text-red-600" />
-                                            </div>
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setPendingDeleteDate(null);
-                                                }}
-                                                className="bg-red-800 p-1 rounded-full hover:bg-red-700 border-b-2 border-red-950 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
-                                            >
-                                                <X className="w-4 h-4 text-white" />
+                                    {/* Confirmation Balloon for DELETE */}
+                                    {record && pendingDeleteDate === record.id && (
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in zoom-in duration-200">
+                                            <div className="bg-red-600 text-white text-[11px] py-2 px-4 rounded-xl shadow-2xl border-b-4 border-red-800 flex items-center gap-3 whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-8 after:border-transparent after:border-t-red-600">
+                                                <span className="font-black italic text-xs">EXCLUIR TREINO?</span>
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        confirmDeleteAttendance();
+                                                    }}
+                                                    className="bg-white p-1 rounded-full hover:bg-red-50 border-b-2 border-red-200 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                                </div>
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPendingDeleteDate(null);
+                                                    }}
+                                                    className="bg-red-800 p-1 rounded-full hover:bg-red-700 border-b-2 border-red-950 active:border-b-0 translate-y-0 active:translate-y-0.5 cursor-pointer transition-all"
+                                                >
+                                                    <X className="w-4 h-4 text-white" />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
-                            </button>
-                        );
-                    })}
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
             {/* Attendance Buttons (Smaller UI) - Moved to bottom and redesigned */}
             {!readOnly && !isAdmin && (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 mt-4 relative">
+                    {isStudentNotAdmin && !hasRecordedAttendance && (
+                        <InstructionBalloon
+                            id="calendar-mark-today"
+                            text="Marque sua presença de hoje aqui!"
+                            position="top"
+                        />
+                    )}
                     <button
-                        onClick={onMarkToday}
+                        onClick={(e) => {
+                            if (onMarkToday) {
+                                // Prevent double clicks or passing Event object if not expected
+                                onMarkToday();
+                            }
+                        }}
                         disabled={isTodayMarked}
                         className={`
                             flex items-center justify-center gap-3 py-4 rounded-[1.25rem] font-black uppercase tracking-[0.15em] italic text-sm transition-all shadow-lg
@@ -362,6 +388,14 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">No-Gi</span>
                 </div>
             </div>
+            {/* Beginner Instruction Footer */}
+            {!readOnly && !isAdmin && !hasRecordedAttendance && (
+                <div className="mt-2 text-center px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.1em] leading-relaxed">
+                        <span className="text-blue-500 dark:text-blue-400">Dica:</span> Toque em qualquer dia no calendário para registrar ou remover presenças.
+                    </p>
+                </div>
+            )}
         </div>
     );
 };

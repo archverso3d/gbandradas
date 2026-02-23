@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info } from 'lucide-react';
+import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info, Heart } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { useNotification } from '../../context/NotificationContext';
 import { curriculumData } from '../../constants/curriculumData';
 import { getCurrentCurriculumWeek } from '../../utils/curriculum';
+import { InstructionBalloon } from '../ui/InstructionBalloon';
 
 interface Category {
     id: string;
@@ -19,6 +20,8 @@ interface Technique {
     category_id?: string;
     platform: 'youtube' | 'instagram' | 'other';
     created_at?: string;
+    likes_count?: number;
+    is_liked?: boolean;
 }
 
 interface TechniqueVaultProps {
@@ -26,6 +29,7 @@ interface TechniqueVaultProps {
     onAddTechnique: (technique: Omit<Technique, 'id' | 'created_at'>) => void;
     onUpdateTechnique: (id: string, technique: Partial<Technique> & { category_id?: string }) => void;
     onDeleteTechnique: (id: string) => void;
+    onToggleLike?: (id: string, isLiked: boolean) => void;
     readOnly?: boolean;
     title?: string;
     currentWeek?: number;
@@ -48,6 +52,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
     onAddTechnique,
     onUpdateTechnique,
     onDeleteTechnique,
+    onToggleLike,
     readOnly = false,
     title = "Minhas Técnicas",
     currentWeek: propWeek,
@@ -68,53 +73,13 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [editingTechnique, setEditingTechnique] = useState<Technique | null>(null);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-    const [showOnboarding, setShowOnboarding] = useState(false);
-    const [showCategoryOnboarding, setShowCategoryOnboarding] = useState(false);
     const notification = useNotification();
     const currentWeekNum = propWeek || getCurrentCurriculumWeek();
 
     useEffect(() => {
-        if (isLoading) return;
-
-        const hasSeenOnboarding = localStorage.getItem('technique_vault_onboarding_done');
-        let timeoutId: NodeJS.Timeout;
-
-        // Immediately hide if there are techniques
-        if (techniques.length > 0) {
-            setShowOnboarding(false);
-            if (!hasSeenOnboarding) {
-                localStorage.setItem('technique_vault_onboarding_done', 'true');
-            }
-            return;
-        }
-
-        // Show add-tech onboarding if empty and hasn't seen
-        if (!hasSeenOnboarding && techniques.length === 0) {
-            timeoutId = setTimeout(() => setShowOnboarding(true), 1200);
-        }
-
-        // Show category onboarding if they open settings and haven't seen it
-        const hasSeenCatOnboarding = localStorage.getItem('technique_vault_cat_onboarding_done');
-        if (!hasSeenCatOnboarding && isManagingCategories) {
-            setShowCategoryOnboarding(true);
-        } else if (!isManagingCategories) {
-            setShowCategoryOnboarding(false);
-        }
-
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-        };
-    }, [techniques.length, isManagingCategories, isLoading]);
-
-    const dismissOnboarding = () => {
-        setShowOnboarding(false);
-        localStorage.setItem('technique_vault_onboarding_done', 'true');
-    };
-
-    const dismissCategoryOnboarding = () => {
-        setShowCategoryOnboarding(false);
-        localStorage.setItem('technique_vault_cat_onboarding_done', 'true');
-    };
+        // Only load categories
+        fetchCategories();
+    }, []);
 
     const DEFAULT_CATEGORIES = [
         { id: 'default-queda', name: 'QUEDAS', color: 'Red' },
@@ -300,6 +265,10 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                     videoId = tech.link.split('embed/')[1].split('?')[0];
                 } else if (tech.link.includes('/shorts/')) {
                     videoId = tech.link.split('/shorts/')[1].split('?')[0];
+                } else if (tech.link.includes('/live/')) {
+                    videoId = tech.link.split('/live/')[1].split('?')[0];
+                } else if (tech.link.includes('/v/')) {
+                    videoId = tech.link.split('/v/')[1].split('?')[0];
                 }
 
                 if (videoId) {
@@ -309,14 +278,20 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
 
             if (tech.platform === 'instagram') {
                 const baseLink = tech.link.split('?')[0].replace(/\/$/, '');
-                if (baseLink.includes('/reels/') || baseLink.includes('/reel/') || baseLink.includes('/p/')) {
+                if (baseLink.includes('/reels/') || baseLink.includes('/reel/') || baseLink.includes('/p/') || baseLink.includes('/tv/')) {
                     return `${baseLink}/embed`;
                 }
+            }
+
+            // Fallback for other potential direct video links or standard URLs
+            // We'll try to iframe them directly if they aren't YouTube/Instagram
+            if (tech.platform === 'other' || !tech.platform) {
+                return tech.link;
             }
         } catch (e) {
             console.error('Error generating embed URL:', e);
         }
-        return null;
+        return tech.link; // Default to returning the link itself
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -471,44 +446,20 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                                 setEditingCategory(null);
                                 setNewCategoryName('');
                             }}
-                            className={`p-2.5 rounded-xl transition-all duo-btn-3d ${isManagingCategories ? 'bg-red-600 text-white shadow-[0_4px_0_0_#991b1b]' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]'}`}
+                            className={`relative p-2.5 rounded-xl transition-all duo-btn-3d ${isManagingCategories ? 'bg-red-600 text-white shadow-[0_4px_0_0_#991b1b]' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]'}`}
                             title={isManagingCategories ? "Sair da Edição" : "Gerenciar Categorias"}
                         >
                             {isManagingCategories ? <Check className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
 
-                            {/* Onboarding Balloon - Manage Categories (Pointer is top-right) */}
-                            {showOnboarding && !isManagingCategories && (
-                                <div className="absolute top-[calc(100%+12px)] right-0 w-48 bg-blue-600 text-white p-3.5 rounded-2xl shadow-2xl z-[150] animate-bounce-subtle pointer-events-auto border-2 border-white/20">
-                                    <div className="absolute -top-2 right-[14px] w-4 h-4 bg-blue-600 rotate-45 border-l-2 border-t-2 border-white/20"></div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider leading-relaxed">
-                                        GERENCIE SUAS CATEGORIAS AQUI! VOCÊ PODE CRIAR, EDITAR OU EXCLUIR GRUPOS TÉCNICOS.
-                                    </p>
-                                </div>
-                            )}
                         </button>
                     )}
                     {!readOnly && (
                         <button
                             onClick={() => setIsAdding(!isAdding)}
-                            className={`p-2.5 rounded-xl transition-all duo-btn-3d ${isAdding ? 'bg-slate-100 text-slate-900 shadow-[0_4px_0_0_#cbd5e1]' : 'bg-blue-600 text-white shadow-[0_4px_0_0_#1d4ed8]'}`}
+                            className={`relative p-2.5 rounded-xl transition-all duo-btn-3d ${isAdding ? 'bg-slate-100 text-slate-900 shadow-[0_4px_0_0_#cbd5e1]' : 'bg-blue-600 text-white shadow-[0_4px_0_0_#1d4ed8]'}`}
                         >
                             {isAdding ? <XCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
 
-                            {/* Onboarding Balloon - Add Technique (Pointer is top-right) */}
-                            {showOnboarding && !isAdding && (
-                                <div className="absolute top-[calc(100%+12px)] right-0 w-48 bg-orange-500 text-white p-3.5 rounded-2xl shadow-2xl z-[150] animate-bounce-subtle pointer-events-auto border-2 border-white/20">
-                                    <div className="absolute -top-2 right-[14px] w-4 h-4 bg-orange-500 rotate-45 border-l-2 border-t-2 border-white/20"></div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider leading-relaxed mb-3">
-                                        CLIQUE AQUI PARA ADICIONAR SUA PRIMEIRA TÉCNICA DO INSTAGRAM OU YOUTUBE!
-                                    </p>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); dismissOnboarding(); }}
-                                        className="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all"
-                                    >
-                                        ENTENDI!
-                                    </button>
-                                </div>
-                            )}
                         </button>
                     )}
                 </div>
@@ -713,404 +664,425 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
 
                 {/* Additional Add Button in Filters */}
                 {!readOnly && (
-                    <button
-                        onClick={() => { setIsManagingCategories(true); setEditingCategory(null); setNewCategoryName(''); }}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all duo-btn-3d shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]"
-                        title="Adicionar Nova Categoria"
-                    >
-                        <Plus className="w-5 h-5" />
-
-                        {/* Onboarding Balloon - Category Attention */}
-                        {showCategoryOnboarding && (
-                            <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-48 bg-emerald-600 text-white p-3.5 rounded-2xl shadow-2xl z-[150] animate-bounce-subtle pointer-events-auto border-2 border-white/20">
-                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-emerald-600 rotate-45 border-r-2 border-b-2 border-white/20"></div>
-                                <p className="text-[10px] font-black uppercase tracking-wider leading-relaxed mb-3">
-                                    CRIE NOVAS CATEGORIAS PERSONALIZADAS PARA ORGANIZAR SEUS VÍDEOS!
-                                </p>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); dismissCategoryOnboarding(); }}
-                                    className="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all"
-                                >
-                                    FOCAR AGORA!
-                                </button>
-                            </div>
-                        )}
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => { setIsManagingCategories(true); setEditingCategory(null); setNewCategoryName(''); }}
+                            className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all duo-btn-3d shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a]"
+                            title="Adicionar Nova Categoria"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                        <InstructionBalloon
+                            id="category-creation-guide"
+                            text="Para criar uma nova categoria, clique no botão + e digite o nome. Exemplos: QUEDAS, PASSAGENS, FINALIZAÇÕES ou DRILLS."
+                            position="bottom"
+                        />
+                    </div>
                 )}
             </div>
 
 
             {/* Editing Technique Modal */}
-            {editingTechnique && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingTechnique(null)}></div>
-                    <form onSubmit={handleUpdateSubmit} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in duration-300 isolate">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-gray-900">Editar Técnica</h3>
-                            <button type="button" onClick={() => setEditingTechnique(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Título da Técnica</label>
-                                <input
-                                    type="text"
-                                    value={newTitle}
-                                    onChange={(e) => setNewTitle(e.target.value.toUpperCase())}
-                                    required
-                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                                />
+            {
+                editingTechnique && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingTechnique(null)}></div>
+                        <form onSubmit={handleUpdateSubmit} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 md:p-8 animate-in zoom-in duration-300 isolate">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900">Editar Técnica</h3>
+                                <button type="button" onClick={() => setEditingTechnique(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link (Instagram ou YouTube)</label>
-                                <input
-                                    type="url"
-                                    value={newLink}
-                                    onChange={(e) => setNewLink(e.target.value)}
-                                    required
-                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Categoria</label>
-                                <select
-                                    value={newCategoryId}
-                                    onChange={(e) => setNewCategoryId(e.target.value)}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all bg-white"
-                                >
-                                    <option value="">Outros</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
 
-                        <div className="flex gap-3 mt-8">
-                            <button
-                                type="button"
-                                onClick={() => setEditingTechnique(null)}
-                                className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-all"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                className="flex-1 px-4 py-3 bg-slate-900 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200"
-                            >
-                                Salvar Alterações
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {filteredTechniques.length === 0 ? (
-                <>
-                    <div className="relative mb-6">
-                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-blue-200 dark:border-blue-800">
-                            <Info className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 italic">
-                            Você ainda não salvou técnicas personalizadas.
-                        </p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-                            Confira as técnicas oficiais do currículo desta semana (Semana {currentWeekNum})
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto text-left px-4 pb-4">
-                        {(() => {
-                            const weekData = curriculumData.find(w => w.week === currentWeekNum);
-                            if (!weekData) return null;
-
-                            const extractItems = (lesson: any) => {
-                                const all: string[] = [];
-                                if (lesson.defesaPessoal) all.push(...lesson.defesaPessoal.items);
-                                if (lesson.jiuJitsuEsportivo) all.push(...lesson.jiuJitsuEsportivo.items);
-                                if (lesson.tecnicaQueda) all.push(...lesson.tecnicaQueda.items);
-                                if (lesson.tecnicaChao) all.push(...lesson.tecnicaChao.items);
-                                return all;
-                            };
-
-                            const items = [
-                                ...extractItems(weekData.gb1.lessonA),
-                                ...extractItems(weekData.gb1.lessonB),
-                                ...extractItems(weekData.gb2.lessonA),
-                                ...extractItems(weekData.gb2.lessonB),
-                            ];
-
-                            const uniqueTechs = Array.from(new Set(items)).map(item => {
-                                const match = item.match(/^(\d+)\.\s*(.*)/);
-                                return match ? match[2] : item;
-                            });
-
-                            return uniqueTechs.slice(0, 6).map((title, idx) => (
-                                <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center gap-3 group/item hover:border-blue-500/50 transition-all opacity-80 hover:opacity-100">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-                                        <Check className="w-4 h-4 text-blue-600" />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase leading-tight">
-                                        {title}
-                                    </span>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Título da Técnica</label>
+                                    <input
+                                        type="text"
+                                        value={newTitle}
+                                        onChange={(e) => setNewTitle(e.target.value.toUpperCase())}
+                                        required
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                                    />
                                 </div>
-                            ));
-                        })()}
-                    </div>
-                </>
-            ) : (
-                <div className="relative z-10">
-                    {selectedFilter === 'Todos' && groupedTechniques ? (
-                        <div className="space-y-12">
-                            {(Object.entries(groupedTechniques) as [string, Technique[]][]).map(([categoryName, groupTechs]) => {
-                                // Only render if group has items
-                                if (groupTechs.length === 0) return null;
-
-                                // Find style for this category
-                                const sampleTech = groupTechs[0];
-                                const style = getCategoryStyles(categoryName, sampleTech.category_id);
-
-                                return (
-                                    <div key={categoryName}>
-                                        <div
-                                            className="flex items-center gap-3 mb-6 group cursor-pointer"
-                                            onClick={() => toggleCategory(categoryName)}
-                                        >
-                                            <div className={`w-2 h-8 rounded-full ${style.fill}`}></div>
-                                            <h3 className="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-gray-100">{categoryName}</h3>
-                                            <span className="text-xs font-bold text-slate-400 dark:text-gray-400 bg-slate-100 dark:bg-gray-800 px-2 py-1 rounded-full">{groupTechs.length}</span>
-
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ml-2 ${expandedCategories.has(categoryName) ? 'bg-red-600 rotate-180' : 'bg-slate-100 dark:bg-gray-800 group-hover:bg-slate-200 dark:group-hover:bg-gray-700'}`}>
-                                                <ChevronDown className={`w-3 h-3 ${expandedCategories.has(categoryName) ? 'text-white' : 'text-slate-500 dark:text-gray-400'}`} />
-                                            </div>
-
-                                            {(() => {
-                                                const catObj = categories.find(c => c.name === categoryName);
-                                                const isDefault = catObj?.id.startsWith('default-');
-                                                if (catObj && !isDefault) {
-                                                    return (
-                                                        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={(e) => startEditing(catObj, e)}
-                                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                                title="Editar Categoria"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => handleDeleteCategory(catObj.id, e)}
-                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                                title="Excluir Categoria"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
-                                        </div>
-                                        <div className={`transition-all duration-500 overflow-hidden ${expandedCategories.has(categoryName) ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {groupTechs.map((tech) => (
-                                                    <div key={tech.id} className="group relative bg-white rounded-2xl border border-gray-100 p-1 hover:border-transparent hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-300 overflow-hidden">
-                                                        <div className={`h-1.5 w-12 rounded-full absolute -top-[1px] left-8 ${style.fill} z-10`}></div>
-
-                                                        <div className="p-4 flex flex-col h-full animate-in fade-in duration-300">
-                                                            <div className="flex items-start justify-between mb-4">
-                                                                <div className={`p-3 rounded-2xl ${style.bg} ${style.text} group-hover:scale-110 transition-transform duration-500`}>
-                                                                    {getPlatformIcon(tech.platform)}
-                                                                </div>
-                                                                {!readOnly && (
-                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                                        <button
-                                                                            onClick={() => startEditingTechnique(tech)}
-                                                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                                            title="Editar Técnica"
-                                                                        >
-                                                                            <Edit2 className="w-4 h-4" />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => onDeleteTechnique(tech.id)}
-                                                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                                            title="Excluir Técnica"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">
-                                                                {tech.title}
-                                                            </h3>
-
-                                                            <div className="mt-auto pt-4 flex items-center justify-between">
-                                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} dark:bg-slate-800 ${style.text} dark:text-slate-400`}>
-                                                                    {tech.category}
-                                                                </span>
-                                                                {tech.platform !== 'other' ? (
-                                                                    <button
-                                                                        onClick={() => setSelectedVideo(tech)}
-                                                                        className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-red-600 hover:gap-3 transition-all"
-                                                                    >
-                                                                        Assistir <Play className="w-3 h-3 fill-current" />
-                                                                    </button>
-                                                                ) : (
-                                                                    <a
-                                                                        href={tech.link}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
-                                                                    >
-                                                                        Link Externo
-                                                                    </a>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredTechniques.map((tech) => {
-                                const style = getCategoryStyles(tech.category, tech.category_id);
-                                return (
-                                    <div key={tech.id} className="group relative bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-1 hover:border-transparent hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-300 overflow-hidden">
-                                        <div className={`h-1.5 w-12 rounded-full absolute -top-[1px] left-8 ${style.fill} z-10`}></div>
-
-                                        <div className="p-4 flex flex-col h-full animate-in fade-in duration-300">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className={`p-3 rounded-2xl ${style.bg} dark:bg-slate-800/80 ${style.text} dark:text-slate-300 group-hover:scale-110 transition-transform duration-500`}>
-                                                    {getPlatformIcon(tech.platform)}
-                                                </div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                    <button
-                                                        onClick={() => startEditingTechnique(tech)}
-                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
-                                                        title="Editar Técnica"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => onDeleteTechnique(tech.id)}
-                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                                        title="Excluir Técnica"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">
-                                                {tech.title}
-                                            </h3>
-
-                                            <div className="mt-auto pt-4 flex items-center justify-between">
-                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} dark:bg-slate-800 ${style.text} dark:text-slate-400`}>
-                                                    {tech.category}
-                                                </span>
-                                                {tech.platform !== 'other' ? (
-                                                    <button
-                                                        onClick={() => setSelectedVideo(tech)}
-                                                        className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-red-600 hover:gap-3 transition-all"
-                                                    >
-                                                        Assistir <Play className="w-3 h-3 fill-current" />
-                                                    </button>
-                                                ) : (
-                                                    <a
-                                                        href={tech.link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
-                                                    >
-                                                        Link Externo
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Video Modal */}
-            {selectedVideo && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
-                    <div
-                        className="absolute inset-0 bg-slate-950/95 backdrop-blur-xl cursor-default"
-                        onClick={() => setSelectedVideo(null)}
-                    ></div>
-
-                    <div className="relative w-full max-w-5xl h-full flex flex-col isolate">
-                        <div className="flex items-start justify-between mb-4 md:mb-8">
-                            <div className="space-y-1 md:space-y-2">
-                                <span className={`inline-block text-[10px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full ${getCategoryStyles(selectedVideo.category, selectedVideo.category_id).fill} text-white shadow-lg`}>
-                                    {selectedVideo.category}
-                                </span>
-                                <h2 className="text-xl md:text-4xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl leading-none">
-                                    {selectedVideo.title}
-                                </h2>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link (Instagram ou YouTube)</label>
+                                    <input
+                                        type="url"
+                                        value={newLink}
+                                        onChange={(e) => setNewLink(e.target.value)}
+                                        required
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Categoria</label>
+                                    <select
+                                        value={newCategoryId}
+                                        onChange={(e) => setNewCategoryId(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none transition-all bg-white"
+                                    >
+                                        <option value="">Outros</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => setSelectedVideo(null)}
-                                className="p-3 bg-white/5 hover:bg-red-600 text-white rounded-full transition-all border border-white/10 backdrop-blur-md shadow-2xl flex-shrink-0"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
 
-                        <div className="flex-grow flex items-center justify-center min-h-0">
-                            <div className={`w-full h-full flex items-center justify-center ${selectedVideo.platform === 'instagram' ? 'max-h-full' : 'aspect-video'}`}>
-                                {getEmbedUrl(selectedVideo) ? (
-                                    <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5 w-full h-full ${selectedVideo.platform === 'instagram' ? 'max-w-full md:max-w-[450px]' : ''}`}>
-                                        <iframe
-                                            src={getEmbedUrl(selectedVideo)!}
-                                            className="w-full h-full"
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                        ></iframe>
-                                    </div>
-                                ) : (
-                                    <div className="bg-white/5 backdrop-blur-md p-12 rounded-[2rem] border border-white/10 text-center space-y-6 max-w-md">
-                                        <div className="w-20 h-20 bg-red-600/20 rounded-full flex items-center justify-center mx-auto border border-red-600/30">
-                                            <Video className="w-10 h-10 text-red-600" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-white font-bold text-xl mb-2">Link Externo</h3>
-                                            <p className="text-slate-400 text-sm">Este vídeo não permite visualização direta. Deseja abrir na plataforma original?</p>
-                                        </div>
-                                        <a
-                                            href={selectedVideo.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl"
-                                        >
-                                            Abrir no {selectedVideo.platform === 'instagram' ? 'Instagram' : 'YouTube'}
-                                        </a>
-                                    </div>
+                            <div className="flex gap-3 mt-8">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingTechnique(null)}
+                                    className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-3 bg-slate-900 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200"
+                                >
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )
+            }
+
+            {
+                filteredTechniques.length === 0 ? (
+                    <>
+                        <div className="relative mb-6 text-center">
+                            <div className="flex justify-center items-center gap-4 mb-4">
+                                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center border-2 border-blue-200 dark:border-blue-800">
+                                    <Info className="w-8 h-8 text-blue-600" />
+                                </div>
+                                {!readOnly && (
+                                    <button
+                                        onClick={() => setIsAdding(true)}
+                                        className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-[0_4px_0_0_#1d4ed8] active:translate-y-1 active:shadow-none"
+                                        title="Adicionar Técnica"
+                                    >
+                                        <Plus className="w-7 h-7" />
+                                    </button>
                                 )}
                             </div>
+                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 italic">
+                                Você ainda não salvou técnicas personalizadas.
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                                Confira as técnicas oficiais do currículo desta semana (Semana {currentWeekNum})
+                            </p>
                         </div>
 
-                        <div className="mt-4 md:mt-8 opacity-20 text-center flex-shrink-0">
-                            <span className="text-white text-[10px] font-black uppercase tracking-[1em] ml-[1em] whitespace-nowrap">GB ANDRADAS</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto text-left px-4 pb-4">
+                            {(() => {
+                                const weekData = curriculumData.find(w => w.week === currentWeekNum);
+                                if (!weekData) return null;
+
+                                const extractItems = (lesson: any) => {
+                                    const all: string[] = [];
+                                    if (lesson.defesaPessoal) all.push(...lesson.defesaPessoal.items);
+                                    if (lesson.jiuJitsuEsportivo) all.push(...lesson.jiuJitsuEsportivo.items);
+                                    if (lesson.tecnicaQueda) all.push(...lesson.tecnicaQueda.items);
+                                    if (lesson.tecnicaChao) all.push(...lesson.tecnicaChao.items);
+                                    return all;
+                                };
+
+                                const items = [
+                                    ...extractItems(weekData.gb1.lessonA),
+                                    ...extractItems(weekData.gb1.lessonB),
+                                    ...extractItems(weekData.gb2.lessonA),
+                                    ...extractItems(weekData.gb2.lessonB),
+                                ];
+
+                                const uniqueTechs = Array.from(new Set(items)).map(item => {
+                                    const match = item.match(/^(\d+)\.\s*(.*)/);
+                                    return match ? match[2] : item;
+                                });
+
+                                return uniqueTechs.slice(0, 6).map((title, idx) => (
+                                    <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center gap-3 group/item hover:border-blue-500/50 transition-all opacity-80 hover:opacity-100">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase leading-tight">
+                                            {title}
+                                        </span>
+                                    </div>
+                                ));
+                            })()}
+                        </div>
+                    </>
+                ) : (
+                    <div className="relative z-10">
+                        {selectedFilter === 'Todos' && groupedTechniques ? (
+                            <div className="space-y-12">
+                                {(Object.entries(groupedTechniques) as [string, Technique[]][]).map(([categoryName, groupTechs]) => {
+                                    // Only render if group has items
+                                    if (groupTechs.length === 0) return null;
+
+                                    // Find style for this category
+                                    const sampleTech = groupTechs[0];
+                                    const style = getCategoryStyles(categoryName, sampleTech.category_id);
+
+                                    return (
+                                        <div key={categoryName}>
+                                            <div
+                                                className="flex items-center gap-3 mb-6 group cursor-pointer"
+                                                onClick={() => toggleCategory(categoryName)}
+                                            >
+                                                <div className={`w-2 h-8 rounded-full ${style.fill}`}></div>
+                                                <h3 className="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-gray-100">{categoryName}</h3>
+                                                <span className="text-xs font-bold text-slate-400 dark:text-gray-400 bg-slate-100 dark:bg-gray-800 px-2 py-1 rounded-full">{groupTechs.length}</span>
+
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ml-2 ${expandedCategories.has(categoryName) ? 'bg-red-600 rotate-180' : 'bg-slate-100 dark:bg-gray-800 group-hover:bg-slate-200 dark:group-hover:bg-gray-700'}`}>
+                                                    <ChevronDown className={`w-3 h-3 ${expandedCategories.has(categoryName) ? 'text-white' : 'text-slate-500 dark:text-gray-400'}`} />
+                                                </div>
+
+                                                {(() => {
+                                                    const catObj = categories.find(c => c.name === categoryName);
+                                                    const isDefault = catObj?.id.startsWith('default-');
+                                                    if (catObj && !isDefault) {
+                                                        return (
+                                                            <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                                <button
+                                                                    onClick={(e) => startEditing(catObj, e)}
+                                                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                    title="Editar Categoria"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => handleDeleteCategory(catObj.id, e)}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                    title="Excluir Categoria"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </div>
+                                            <div className={`transition-all duration-500 overflow-hidden ${expandedCategories.has(categoryName) ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    {groupTechs.map((tech) => (
+                                                        <div key={tech.id} className="group relative bg-white rounded-2xl border border-gray-100 p-1 hover:border-transparent hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-300 overflow-hidden">
+                                                            <div className={`h-1.5 w-12 rounded-full absolute -top-[1px] left-8 ${style.fill} z-10`}></div>
+
+                                                            <div className="p-4 flex flex-col h-full animate-in fade-in duration-300">
+                                                                <div className="flex items-start justify-between mb-4">
+                                                                    <div className={`p-3 rounded-2xl ${style.bg} ${style.text} group-hover:scale-110 transition-transform duration-500`}>
+                                                                        {getPlatformIcon(tech.platform)}
+                                                                    </div>
+                                                                    {!readOnly && (
+                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                            <button
+                                                                                onClick={() => startEditingTechnique(tech)}
+                                                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                                title="Editar Técnica"
+                                                                            >
+                                                                                <Edit2 className="w-4 h-4" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => onDeleteTechnique(tech.id)}
+                                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                                title="Excluir Técnica"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">
+                                                                    {tech.title}
+                                                                </h3>
+
+                                                                <div className="mt-auto pt-4 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} dark:bg-slate-800 ${style.text} dark:text-slate-400`}>
+                                                                            {tech.category}
+                                                                        </span>
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); onToggleLike?.(tech.id, tech.is_liked || false); }}
+                                                                            className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all group/like ${tech.is_liked ? 'bg-red-50 dark:bg-red-900/20 text-red-600' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-red-500'}`}
+                                                                            title={tech.is_liked ? "Remover Curtida" : "Curtir Técnica"}
+                                                                        >
+                                                                            <Heart className={`w-3.5 h-3.5 transition-transform group-active/like:scale-125 ${tech.is_liked ? 'fill-current scale-110' : 'group-hover/like:scale-110'}`} />
+                                                                            {tech.likes_count !== undefined && tech.likes_count > 0 && (
+                                                                                <span className="text-[10px] font-black">{tech.likes_count}</span>
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => setSelectedVideo(tech)}
+                                                                        className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${tech.platform !== 'other' ? 'text-red-600 hover:gap-3' : 'text-slate-400 hover:text-slate-900'}`}
+                                                                    >
+                                                                        {tech.platform !== 'other' ? (
+                                                                            <>Assistir <Play className="w-3 h-3 fill-current" /></>
+                                                                        ) : (
+                                                                            <>Ver Conteúdo <LinkIcon className="w-3 h-3" /></>
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {filteredTechniques.map((tech) => {
+                                    const style = getCategoryStyles(tech.category, tech.category_id);
+                                    return (
+                                        <div key={tech.id} className="group relative bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-1 hover:border-transparent hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-300 overflow-hidden">
+                                            <div className={`h-1.5 w-12 rounded-full absolute -top-[1px] left-8 ${style.fill} z-10`}></div>
+
+                                            <div className="p-4 flex flex-col h-full animate-in fade-in duration-300">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className={`p-3 rounded-2xl ${style.bg} dark:bg-slate-800/80 ${style.text} dark:text-slate-300 group-hover:scale-110 transition-transform duration-500`}>
+                                                        {getPlatformIcon(tech.platform)}
+                                                    </div>
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <button
+                                                            onClick={() => startEditingTechnique(tech)}
+                                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                                                            title="Editar Técnica"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onDeleteTechnique(tech.id)}
+                                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                                            title="Excluir Técnica"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">
+                                                    {tech.title}
+                                                </h3>
+
+                                                <div className="mt-auto pt-4 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-md ${style.bg} dark:bg-slate-800 ${style.text} dark:text-slate-400`}>
+                                                            {tech.category}
+                                                        </span>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); onToggleLike?.(tech.id, tech.is_liked || false); }}
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all group/like ${tech.is_liked ? 'bg-red-50 dark:bg-red-900/20 text-red-600' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-red-500'}`}
+                                                            title={tech.is_liked ? "Remover Curtida" : "Curtir Técnica"}
+                                                        >
+                                                            <Heart className={`w-3.5 h-3.5 transition-transform group-active/like:scale-125 ${tech.is_liked ? 'fill-current scale-110' : 'group-hover/like:scale-110'}`} />
+                                                            {tech.likes_count !== undefined && tech.likes_count > 0 && (
+                                                                <span className="text-[10px] font-black">{tech.likes_count}</span>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setSelectedVideo(tech)}
+                                                        className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${tech.platform !== 'other' ? 'text-red-600 hover:gap-3' : 'text-slate-400 hover:text-slate-900'}`}
+                                                    >
+                                                        {tech.platform !== 'other' ? (
+                                                            <>Assistir <Play className="w-3 h-3 fill-current" /></>
+                                                        ) : (
+                                                            <>Ver Conteúdo <LinkIcon className="w-3 h-3" /></>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+
+            {/* Video Modal */}
+            {
+                selectedVideo && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+                        <div
+                            className="absolute inset-0 bg-slate-950/95 backdrop-blur-xl cursor-default"
+                            onClick={() => setSelectedVideo(null)}
+                        ></div>
+
+                        <div className="relative w-full max-w-5xl h-full flex flex-col isolate">
+                            <div className="flex items-start justify-between mb-4 md:mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="space-y-1 md:space-y-2">
+                                        <span className={`inline-block text-[10px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full ${getCategoryStyles(selectedVideo.category, selectedVideo.category_id).fill} text-white shadow-lg`}>
+                                            {selectedVideo.category}
+                                        </span>
+                                        <h2 className="text-xl md:text-4xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl leading-none">
+                                            {selectedVideo.title}
+                                        </h2>
+                                    </div>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onToggleLike?.(selectedVideo.id, selectedVideo.is_liked || false); }}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-2xl transition-all group/like ${selectedVideo.is_liked ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                                    >
+                                        <Heart className={`w-5 h-5 transition-transform group-active/like:scale-150 ${selectedVideo.is_liked ? 'fill-current scale-110' : 'group-hover/like:scale-110'}`} />
+                                        {selectedVideo.likes_count !== undefined && selectedVideo.likes_count > 0 && (
+                                            <span className="text-lg font-black">{selectedVideo.likes_count}</span>
+                                        )}
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedVideo(null)}
+                                    className="p-3 bg-white/5 hover:bg-red-600 text-white rounded-full transition-all border border-white/10 backdrop-blur-md shadow-2xl flex-shrink-0"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="flex-grow flex items-center justify-center min-h-0">
+                                <div className={`w-full h-full flex items-center justify-center ${selectedVideo.platform === 'instagram' ? 'max-h-full' : 'aspect-video'}`}>
+                                    {getEmbedUrl(selectedVideo) ? (
+                                        <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5 w-full h-full ${selectedVideo.platform === 'instagram' ? 'max-w-full md:max-w-[450px]' : ''}`}>
+                                            <iframe
+                                                src={getEmbedUrl(selectedVideo)!}
+                                                className="w-full h-full"
+                                                frameBorder="0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            ></iframe>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white/5 backdrop-blur-md p-12 rounded-[2rem] border border-white/10 text-center space-y-6 max-w-md">
+                                            <div className="w-20 h-20 bg-slate-600/20 rounded-full flex items-center justify-center mx-auto border border-slate-600/30">
+                                                <Video className="w-10 h-10 text-slate-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-white font-bold text-xl mb-2">Conteúdo Indisponível</h3>
+                                                <p className="text-slate-400 text-sm">Este link não pode ser reproduzido diretamente no site devido a restrições de segurança da plataforma de origem.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="mt-4 md:mt-8 opacity-20 text-center flex-shrink-0">
+                                <span className="text-white text-[10px] font-black uppercase tracking-[1em] ml-[1em] whitespace-nowrap">GB ANDRADAS</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

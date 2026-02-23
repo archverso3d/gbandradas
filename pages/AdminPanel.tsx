@@ -17,6 +17,7 @@ import { StudentDetailsEditor } from '../components/admin/StudentDetailsEditor';
 import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculum';
 import { WeeklyCurriculum } from '../components/student/WeeklyCurriculum';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
+import { TechniqueLinksManager } from '../components/admin/TechniqueLinksManager';
 
 const AdminPanel: React.FC = () => {
     const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -26,10 +27,12 @@ const AdminPanel: React.FC = () => {
     const [search, setSearch] = useState('');
     const [currentWeek, setCurrentWeek] = useState<number>(getCurrentCurriculumWeek());
     const [selectedClass, setSelectedClass] = useState<string>(getClassLabelByDay());
+    const [techniqueLinks, setTechniqueLinks] = useState<Record<string, string>>({});
     const [savingSettings, setSavingSettings] = useState(false);
     const [attendanceRefresh, setAttendanceRefresh] = useState(0);
     const [showSidebar, setShowSidebar] = useState(false);
     const [confirmingBatch, setConfirmingBatch] = useState(false);
+    const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
     const notification = useNotification();
 
     const { user, isAdmin, signOut, loading: authLoading } = useAuth();
@@ -58,6 +61,13 @@ const AdminPanel: React.FC = () => {
         // For now, let's stick to the "update alone" request.
         setCurrentWeek(getCurrentCurriculumWeek());
         setSelectedClass(getClassLabelByDay());
+
+        try {
+            const links = await adminService.getTechniqueLinks();
+            setTechniqueLinks(links);
+        } catch (error) {
+            console.error('Error loading technique links in admin:', error);
+        }
     };
 
     const loadStudents = async () => {
@@ -107,6 +117,38 @@ const AdminPanel: React.FC = () => {
         }
     };
 
+    const handleDeleteStudent = async (userId: string, permanent = false) => {
+        try {
+            if (permanent) {
+                await adminService.permanentlyDeleteStudent(userId);
+                notification.alert('Aluno removido permanentemente do banco de dados.', 'Exclusão Definitiva');
+            } else {
+                await adminService.deleteStudent(userId);
+                notification.alert('Aluno movido para a Lixeira (retenção de 72h).', 'Movido para Lixeira');
+            }
+            setSelectedStudent(null);
+            await loadStudents();
+        } catch (error: any) {
+            console.error('Error deleting student:', error);
+            const errorMessage = error?.message || error?.details || 'Erro desconhecido';
+            notification.alert(`Não foi possível excluir: ${errorMessage}`, 'Falha na Exclusão');
+            throw error;
+        }
+    };
+
+    const handleRestoreStudent = async (userId: string) => {
+        try {
+            await adminService.restoreStudent(userId);
+            notification.alert('Aluno restaurado com sucesso!', 'Restauração');
+            setSelectedStudent(null);
+            await loadStudents();
+        } catch (error: any) {
+            console.error('Error restoring student:', error);
+            const errorMessage = error?.message || error?.details || 'Erro desconhecido';
+            notification.alert(`Não foi possível restaurar: ${errorMessage}`, 'Falha');
+            throw error;
+        }
+    };
 
     const handleToggleSelect = (id: string) => {
         setSelectedStudentIds(prev =>
@@ -169,8 +211,22 @@ const AdminPanel: React.FC = () => {
         const name = s.full_name || '';
         const email = s.email || '';
         const searchLower = search.toLowerCase();
-        return name.toLowerCase().includes(searchLower) || email.toLowerCase().includes(searchLower);
+
+        // Filter by text search
+        if (!name.toLowerCase().includes(searchLower) && !email.toLowerCase().includes(searchLower)) {
+            return false;
+        }
+
+        // Filter by view mode
+        if (viewMode === 'active') {
+            return !s.deleted_at;
+        } else {
+            return !!s.deleted_at;
+        }
     });
+
+    const activeCount = students.filter(s => !s.deleted_at).length;
+    const trashCount = students.filter(s => s.deleted_at).length;
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 transition-colors duration-500">
@@ -210,6 +266,29 @@ const AdminPanel: React.FC = () => {
 
                     {/* Global Actions */}
                     <div className="flex flex-wrap items-center gap-3">
+                        {/* View Toggle */}
+                        <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 border border-slate-200 dark:border-slate-800">
+                            <button
+                                onClick={() => { setViewMode('active'); setSelectedStudent(null); }}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'active'
+                                        ? 'bg-slate-900 text-white dark:bg-slate-800'
+                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                    }`}
+                            >
+                                Ativos ({activeCount})
+                            </button>
+                            <button
+                                onClick={() => { setViewMode('trash'); setSelectedStudent(null); }}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'trash'
+                                        ? 'bg-red-600 text-white'
+                                        : 'text-slate-500 hover:text-red-500'
+                                    }`}
+                            >
+                                <Users className="w-3.5 h-3.5" />
+                                Lixeira ({trashCount})
+                            </button>
+                        </div>
+
                         {/* Mobile Sidebar Toggle */}
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
@@ -217,7 +296,7 @@ const AdminPanel: React.FC = () => {
                             aria-label={showSidebar ? 'Ocultar lista de alunos' : 'Mostrar lista de alunos'}
                         >
                             <Users className="w-4 h-4" />
-                            <span>{showSidebar ? 'Ocultar Lista' : 'Lista de Alunos'}</span>
+                            <span>{showSidebar ? 'Ocultar Lista' : 'Lista (' + (viewMode === 'active' ? 'Ativos' : 'Lixeira') + ')'}</span>
                         </button>
                     </div>
                 </header>
@@ -226,6 +305,7 @@ const AdminPanel: React.FC = () => {
                     <WeeklyCurriculum
                         currentBelt="Faixa Preta" // Admins see everything (GB1 & GB2)
                         defaultWeek={currentWeek}
+                        techniqueLinks={techniqueLinks}
                     />
                 </div>
 
@@ -266,6 +346,9 @@ const AdminPanel: React.FC = () => {
                                     onUpdate={(updates) => setSelectedStudent(prev => prev ? { ...prev, ...updates } : null)}
                                     onSave={handleUpdateStudent}
                                     onMarkAttendance={handleMarkAttendance}
+                                    onDelete={(id) => handleDeleteStudent(id, false)}
+                                    onRestore={handleRestoreStudent}
+                                    onPermanentDelete={(id) => handleDeleteStudent(id, true)}
                                     attendanceRefresh={attendanceRefresh}
                                     key={selectedStudent.user_id + students.length} // Force reload when data changes
                                 />
@@ -294,6 +377,11 @@ const AdminPanel: React.FC = () => {
                         )}
                     </div>
                 </main>
+
+                {/* Technique Links Manager */}
+                <div className="mt-8">
+                    <TechniqueLinksManager />
+                </div>
                 {/* Batch Action Bar */}
                 {
                     selectedStudentIds.length > 0 && (

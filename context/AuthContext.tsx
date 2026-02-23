@@ -33,6 +33,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     const fetchProfile = async (userId: string) => {
+        const isDemo = localStorage.getItem('demo_mode') === 'true';
+        if (isDemo) {
+            console.log('📋 [DEMO] Loading profile from localStorage');
+            const demoProfile = localStorage.getItem('demo_profile');
+            if (demoProfile) {
+                setProfile(JSON.parse(demoProfile));
+                return;
+            }
+        }
+
         try {
             console.log('📋 Fetching profile for userId:', userId);
             // Add a timeout to the profile fetch to prevent hanging the whole app
@@ -129,19 +139,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         role: 'authenticated'
                     } as any;
 
-                    const mockProfile = {
+                    const storedProfile = localStorage.getItem('demo_profile');
+                    const mockProfile = storedProfile ? JSON.parse(storedProfile) : {
                         user_id: demoId,
                         role: 'student',
-                        full_name: 'Aluno Teste (Demo)',
+                        full_name: 'Admin',
                         avatar_url: null,
                         current_belt: 'Faixa Branca',
                         degrees: 0,
                         start_date: new Date().toISOString(),
                         student_category: 'GB1'
-                    } as AuthProfile;
+                    };
 
+                    localStorage.setItem('demo_profile', JSON.stringify(mockProfile));
                     setUser(mockUser);
-                    setProfile(mockProfile);
+                    setProfile(mockProfile as AuthProfile);
                     setLoading(false);
                     return;
                 }
@@ -199,15 +211,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setUser(currentSession?.user ?? null);
 
                 if (currentSession?.user) {
-                    // Don't await here to avoid blocking setLoading(false)
+                    setLoading(true);
                     fetchProfile(currentSession.user.id).finally(() => {
                         if (mounted) setLoading(false);
                     });
+                } else {
+                    setLoading(false);
                 }
+            } else {
+                setLoading(false);
             }
-
-            // Only set loading to false if we weren't already initialized or if it's an important event
-            setLoading(false);
         });
 
         return () => {
@@ -247,8 +260,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user?.id]);
 
     const signInDemo = () => {
-        console.log('🚀 Signing in as DEMO USER');
-        const demoId = 'demo-user-' + Math.random().toString(36).substr(2, 9);
+        console.log('🚀 [AUTH_CONTEXT] Executing signInDemo. Setting localStorage...');
+        const demoId = 'demo-user-aluno';
 
         const mockUser = {
             id: demoId,
@@ -258,23 +271,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: 'authenticated'
         } as any;
 
-        const mockProfile = {
+        const storedProfile = localStorage.getItem('demo_profile');
+        const mockProfile = storedProfile ? JSON.parse(storedProfile) : {
             user_id: demoId,
             role: 'student',
-            full_name: 'Aluno Teste (Demo)',
+            full_name: 'Admin',
             avatar_url: null,
             current_belt: 'Faixa Branca',
             degrees: 0,
             start_date: new Date().toISOString(),
             student_category: 'GB1'
-        } as AuthProfile;
+        };
 
         localStorage.setItem('demo_user_id', demoId);
         localStorage.setItem('demo_mode', 'true');
+        localStorage.setItem('demo_profile', JSON.stringify(mockProfile));
 
         setUser(mockUser);
         setSession(null);
-        setProfile(mockProfile);
+        setProfile(mockProfile as AuthProfile);
     };
 
     const isAdmin = profile?.role === 'admin';

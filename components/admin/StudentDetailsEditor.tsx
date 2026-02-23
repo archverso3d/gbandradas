@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Award, Clock, CheckCircle2, Mail, Phone, User, Save, Play, Video } from 'lucide-react';
+import { Settings, Award, Clock, CheckCircle2, Mail, Phone, User, Save, Play, Video, Trash2, AlertCircle } from 'lucide-react';
 import { StudentProfile, adminService } from '../../services/admin';
 import { AttendanceCalendar } from './AttendanceCalendar';
 
@@ -9,6 +9,9 @@ interface StudentDetailsEditorProps {
     onSave: (e: React.FormEvent) => Promise<void>;
     onMarkAttendance: (date?: Date) => void;
     attendanceRefresh?: number;
+    onDelete?: (userId: string) => Promise<void>;
+    onRestore?: (userId: string) => Promise<void>;
+    onPermanentDelete?: (userId: string) => Promise<void>;
 }
 
 const BELTS = [
@@ -59,13 +62,47 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
     onUpdate,
     onSave,
     onMarkAttendance,
-    attendanceRefresh
+    attendanceRefresh,
+    onDelete,
+    onRestore,
+    onPermanentDelete
 }) => {
+    const isDeleted = !!student.deleted_at;
     const [techniques, setTechniques] = React.useState<any[]>([]);
     const [loadingTechs, setLoadingTechs] = React.useState(true);
     const [showTechniques, setShowTechniques] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
     const [isSaved, setIsSaved] = React.useState(false);
+    const [deleteStep, setDeleteStep] = React.useState<0 | 1 | 2>(0);
+
+    const handleDeleteClick = async () => {
+        if (deleteStep === 0) {
+            setDeleteStep(1);
+            setTimeout(() => {
+                setDeleteStep(prev => prev === 1 ? 0 : prev);
+            }, 3000);
+        } else if (deleteStep === 1) {
+            const confirmation = window.prompt(
+                `Atenção: A exclusão de ${student.full_name || 'este aluno'} apagará TODOS os dados, incluindo histórico e vídeos salvos!\n\nPara confirmar, digite EXCLUIR:`
+            );
+
+            if (confirmation !== 'EXCLUIR') {
+                alert('A exclusão foi cancelada.');
+                setDeleteStep(0);
+                return;
+            }
+
+            if (onDelete) {
+                setDeleteStep(2);
+                try {
+                    await onDelete(student.user_id);
+                } catch (error) {
+                    console.error('Delete failed:', error);
+                    setDeleteStep(0);
+                }
+            }
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,8 +141,43 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {/* Deleted Banner */}
+            {isDeleted && (
+                <div className="lg:col-span-12 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        <div>
+                            <h4 className="text-sm font-black text-red-900 dark:text-red-200 uppercase tracking-widest">Aluno na Lixeira (Limbo)</h4>
+                            <p className="text-xs text-red-700 dark:text-red-300 font-medium">Este aluno foi excluído e será deletado permanentemente em breve. Ações normais estão bloqueadas.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {onRestore && (
+                            <button
+                                onClick={() => onRestore(student.user_id)}
+                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-widest rounded-lg transition-colors shadow-sm"
+                            >
+                                Restaurar Aluno
+                            </button>
+                        )}
+                        {onPermanentDelete && (
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('CUIDADO: Isso excluirá o aluno permanentemente SEM CHANCE DE RECUPERAÇÃO. Tem certeza?')) {
+                                        onPermanentDelete(student.user_id);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-widest rounded-lg transition-colors shadow-sm"
+                            >
+                                Excluir Permanentemente
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Left Column: Attendance & Actions */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className={`lg:col-span-5 space-y-6 ${isDeleted ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                 {/* Quick Action: Mark Presence */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 relative overflow-hidden transition-colors">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-full -mr-12 -mt-12 blur-2xl opacity-50" />
@@ -207,33 +279,57 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
                             )}
                         </div>
                         <div className="flex-1 min-w-0 space-y-3">
-                            <div>
-                                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none mb-1">
-                                    {student.full_name}
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    {(() => {
-                                        const b = BELTS.find(x => x.id === student.current_belt) || BELTS[0];
-                                        return (
-                                            <span
-                                                className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border shadow-sm transition-colors"
-                                                style={{ backgroundColor: b.color, borderColor: b.border, color: b.text }}
-                                            >
-                                                {b.name}
-                                            </span>
-                                        );
-                                    })()}
-                                    {student.degrees > 0 && (
-                                        <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-md border border-slate-800 shadow-sm">
-                                            {[...Array(student.degrees)].map((_, i) => (
-                                                <div key={i} className="w-1 h-3 bg-white rounded-full last:animate-pulse" />
-                                            ))}
-                                            <span className="text-[9px] font-black text-white uppercase tracking-tighter ml-1">
-                                                {student.degrees}º Grau
-                                            </span>
-                                        </div>
-                                    )}
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none mb-1">
+                                        {student.full_name}
+                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                        {(() => {
+                                            const b = BELTS.find(x => x.id === student.current_belt) || BELTS[0];
+                                            return (
+                                                <span
+                                                    className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border shadow-sm transition-colors"
+                                                    style={{ backgroundColor: b.color, borderColor: b.border, color: b.text }}
+                                                >
+                                                    {b.name}
+                                                </span>
+                                            );
+                                        })()}
+                                        {student.degrees > 0 && (
+                                            <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-md border border-slate-800 shadow-sm">
+                                                {[...Array(student.degrees)].map((_, i) => (
+                                                    <div key={i} className="w-1 h-3 bg-white rounded-full last:animate-pulse" />
+                                                ))}
+                                                <span className="text-[9px] font-black text-white uppercase tracking-tighter ml-1">
+                                                    {student.degrees}º Grau
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
+                                {!isDeleted && onDelete && (
+                                    <button
+                                        onClick={handleDeleteClick}
+                                        type="button"
+                                        className={`
+                                            p-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm shrink-0
+                                            ${deleteStep === 0 ? 'text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 border border-slate-100 dark:border-slate-700' : ''}
+                                            ${deleteStep === 1 ? 'text-white bg-red-500 hover:bg-red-600 shadow-red-500/30 border-transparent' : ''}
+                                            ${deleteStep === 2 ? 'text-white bg-red-400 cursor-not-allowed border-transparent' : ''}
+                                        `}
+                                        title={deleteStep === 0 ? "Excluir Aluno" : "Confirmar Exclusão"}
+                                    >
+                                        {deleteStep === 0 && <Trash2 className="w-4 h-4" />}
+                                        {deleteStep === 1 && (
+                                            <>
+                                                <AlertCircle className="w-4 h-4 animate-pulse" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Confirmar?</span>
+                                            </>
+                                        )}
+                                        {deleteStep === 2 && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                    </button>
+                                )}
                             </div>
 
                             <div className="flex flex-wrap gap-4 pt-1">
@@ -254,7 +350,7 @@ export const StudentDetailsEditor: React.FC<StudentDetailsEditorProps> = ({
 
 
 
-                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors">
+                <div className={`bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors ${isDeleted ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                     <div className="p-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/40 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-white dark:bg-slate-950 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">

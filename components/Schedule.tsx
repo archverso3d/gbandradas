@@ -24,7 +24,7 @@ const Schedule: React.FC = () => {
     { time: '11:00 - 12:00', events: ['GB1 Adultos', 'GB1 Adultos', 'GB1 Adultos', 'GB1 Adultos', 'GB1 / GB2 (NO GI)', '---'] },
     { time: '16:30 - 17:30', events: ['GBK Juniors', 'GBK Juniors', 'GBK Juniors', 'GBK Juniors', 'GBK (NO GI)', '---'] },
     { time: '18:00 - 19:00', events: ['GBK (PC2)', 'GBK (MC + PC1)', 'GBK (PC2)', 'GBK (MC + PC1)', 'GBK (NO GI)', '---'] },
-    { time: '19:00 - 20:00', events: ['GB1 (Todos Níveis)', 'GB1 (Todos Níveis)', 'GB1 (Todos Níveis)', 'GB1 (Todos Níveis)', 'GB F (Feminino)', '---'] },
+    { time: '19:00 - 20:00', events: ['GB1 (Todos Níveis)', 'GB1 (Todos Níveis)', 'GB F (Feminino)', 'GB1 (Todos Níveis)', 'GB1 (NO GI)', '---'] },
     { time: '20:00 - 21:00', events: ['GB2 Avançados', 'GB2 Avançados', 'GB2 Avançados', 'GB2 Avançados', 'GB2 (NO GI)', '---'] },
   ];
 

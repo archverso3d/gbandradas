@@ -3,23 +3,31 @@
  * Following best practices for environment-awareness and multi-environment support.
  */
 export const getAuthRedirectUrl = (path: string = 'auth/callback') => {
-    // 1. Try environment variables (Vite pattern)
-    const metaEnv = (import.meta as any).env || {};
+    // 1. Detect if we are in development/local mode
+    const isDev = typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    // Check if we are running in production on Vercel or locally
+    // 2. Try environment variables
+    const metaEnv = (import.meta as any).env || {};
     const isProd = metaEnv.PROD || metaEnv.MODE === 'production';
 
-    let url =
-        metaEnv.VITE_SITE_URL ??
-        (isProd ? metaEnv.VITE_VERCEL_URL : '') ??
-        '';
+    let url = '';
 
-    // 2. Fallback to runtime origin if variables aren't set (Dynamic Detection)
+    // If we are local, ALWAYS prioritize the current window origin to avoid Vercel redirects
+    if (isDev) {
+        url = window.location.origin;
+    } else {
+        url = metaEnv.VITE_SITE_URL ??
+            (isProd ? metaEnv.VITE_VERCEL_URL : '') ??
+            '';
+    }
+
+    // 3. Fallback to runtime origin if variables aren't set
     if (!url && typeof window !== 'undefined') {
         url = window.location.origin;
     }
 
-    // 3. Fallback for static builds if everything else fails
+    // 4. Final fallback
     if (!url) url = 'http://localhost:3000';
 
     // Best Practice Logic: Ensure the URL ends with a single /

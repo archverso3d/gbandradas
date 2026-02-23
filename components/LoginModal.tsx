@@ -14,7 +14,7 @@ type AuthMode = 'login' | 'signup';
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
-    const [redirectPending, setRedirectPending] = useState(false);
+    const [redirectPending, setRedirectPending] = useState<string | null>(null);
     const { refreshProfile, user, profile, isAdmin, signInDemo } = useAuth();
     const [mode, setMode] = useState<AuthMode>('login');
     const [email, setEmail] = useState('');
@@ -44,45 +44,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         return () => document.removeEventListener('keydown', handleEscape);
     }, [isOpen, loading, onClose]);
 
-
-
-    // Handle redirect after successful login/signup AND context update
+    // Redirect when context confirms user is authenticated
     React.useEffect(() => {
         if (redirectPending && user) {
-            const performRedirect = () => {
-                setRedirectPending(false);
-                onClose();
-                if (isAdmin || (profile?.role === 'admin')) {
-                    navigate('/admin');
-                } else {
-                    navigate('/aluno');
-                }
-            };
-
-            // If profile is already loaded, redirect immediately
-            if (profile) {
-                performRedirect();
-            } else {
-                // If profile hasn't loaded yet, wait up to 2 seconds before defaulting to /aluno
-                const timeoutId = setTimeout(() => {
-                    console.log('⚠️ Profile load timeout - redirecting to /aluno by default');
-                    setRedirectPending(false);
-                    onClose();
-                    navigate('/aluno');
-                }, 2000);
-
-                return () => clearTimeout(timeoutId);
-            }
+            onClose();
+            navigate(redirectPending);
+            setRedirectPending(null);
         }
-    }, [redirectPending, user, profile, isAdmin, navigate, onClose]);
-
+    }, [redirectPending, user, navigate, onClose]);
 
     const toggleMode = () => {
         setMode(mode === 'login' ? 'signup' : 'login');
         setError('');
     };
-
-
 
     const handleGoogleLogin = async () => {
         setError('');
@@ -92,7 +66,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 provider: 'google',
                 options: {
                     redirectTo: getAuthRedirectUrl(),
-
                 }
             });
 
@@ -124,9 +97,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
         try {
             if (mode === 'login' && email.trim().toLowerCase() === 'aluno' && password === 'aluno') {
-                console.log('🚀 Login DEMO detectado');
+                console.log('🚀 Login DEMO detectado. Window origin:', window.location.origin);
                 signInDemo();
-                setRedirectPending(true);
+                setRedirectPending('/aluno');
                 return;
             }
 
@@ -145,10 +118,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 }
 
                 if (data.session) {
-                    // Trigger context refresh (optimistic)
-                    await refreshProfile();
-                    // Set flag to wait for context update in useEffect
-                    setRedirectPending(true);
+                    try {
+                        const { data: profileData } = await supabase
+                            .from('user_profiles')
+                            .select('role')
+                            .eq('user_id', data.session.user.id)
+                            .single();
+
+                        if (profileData?.role === 'admin') {
+                            setRedirectPending('/admin');
+                        } else {
+                            setRedirectPending('/aluno');
+                        }
+                    } catch (err) {
+                        setRedirectPending('/aluno');
+                    }
                 }
             } else {
                 const { data, error: signUpError } = await supabase.auth.signUp({
@@ -159,7 +143,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             full_name: fullName,
                         },
                         emailRedirectTo: getAuthRedirectUrl()
-
                     }
                 });
 
@@ -171,7 +154,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
                 if (data.user) {
                     if (data.session) {
-                        setRedirectPending(true);
+                        setRedirectPending('/aluno');
                     } else {
                         setError('Cadastro realizado! Por favor, verifique seu e-mail.');
                         setLoading(false);
@@ -183,10 +166,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             setError('Ocorreu um erro. Tente novamente.');
             setLoading(false);
         }
-        // Note: We don't set loading(false) here if successful, expecting redirect to unmount or close
     };
 
-    // Early return MOVED to after hooks to prevent "Rendered more hooks" error
     if (!isOpen) return null;
 
     return (

@@ -9,14 +9,14 @@ const ThemeToggle: React.FC = () => {
         <button
             onClick={toggleTheme}
             className={`
-        fixed top-6 left-6 z-[110]
-        p-3 rounded-2xl
+        fixed top-4 right-4 z-[110]
+        p-2 rounded-xl
         transition-all duration-500 ease-spring
         flex items-center justify-center
         group overflow-hidden
         ${theme === 'light'
-                    ? 'bg-white/80 text-gray-800 shadow-xl shadow-gray-200/50 hover:shadow-gray-300/50 border border-gray-100'
-                    : 'bg-gray-900/80 text-yellow-400 shadow-2xl shadow-black/50 hover:shadow-black/70 border border-gray-800'
+                    ? 'bg-white/80 text-gray-800 shadow-lg shadow-gray-200/50 hover:shadow-gray-300/50 border border-gray-100'
+                    : 'bg-gray-900/80 text-yellow-400 shadow-xl shadow-black/50 hover:shadow-black/70 border border-gray-800'
                 }
         backdrop-blur-md
         hover:scale-110 active:scale-95
@@ -29,11 +29,11 @@ const ThemeToggle: React.FC = () => {
         ${theme === 'light' ? 'bg-orange-400' : 'bg-yellow-400'}
       `} />
 
-            <div className="relative z-10 w-6 h-6 flex items-center justify-center">
+            <div className="relative z-10 w-5 h-5 flex items-center justify-center">
                 {theme === 'light' ? (
-                    <Sun className="w-6 h-6 animate-fade-in-down transition-transform group-hover:rotate-45" />
+                    <Sun className="w-5 h-5 animate-fade-in-down transition-transform group-hover:rotate-45" />
                 ) : (
-                    <Moon className="w-6 h-6 animate-fade-in-up transition-transform group-hover:-rotate-12" />
+                    <Moon className="w-5 h-5 animate-fade-in-up transition-transform group-hover:-rotate-12" />
                 )}
             </div>
 
