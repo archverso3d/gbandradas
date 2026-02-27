@@ -11,10 +11,15 @@ interface TourContextType {
 const TOUR_STEPS = [
     'graduation-info',
     'curriculum-expand',
+    'weight-tracker-info',
     'technique-video-link',
-    'category-creation-guide',
+    'calendar-past-days',
+    'calendar-mark-today',
     'training-streak',
-    'technique-history'
+    'report-summary-info',
+    'technique-history',
+    'training-focus',
+    'category-creation-guide'
 ];
 
 const TourContext = createContext<TourContextType | undefined>(undefined);
@@ -35,8 +40,46 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCurrentStepIndex(0);
             }
             setIsTourActive(true);
+
+            // Mark as completed immediately so it doesn't reappear on refresh/second access
+            // The user only wants to see it once.
+            localStorage.setItem('tour_completed', 'true');
         }
     }, []);
+
+    // Global interception for the tour
+    useEffect(() => {
+        if (!isTourActive) return;
+
+        const handleGlobalEvent = (e: MouseEvent | TouchEvent | KeyboardEvent) => {
+            let target = e.target as HTMLElement | null;
+            let isInsideBalloon = false;
+
+            while (target) {
+                if (target.classList && target.classList.contains('instruction-balloon')) {
+                    isInsideBalloon = true;
+                    break;
+                }
+                target = target.parentElement;
+            }
+
+            if (!isInsideBalloon) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
+        // Use capture phase to intercept before React synthetic events
+        window.addEventListener('click', handleGlobalEvent, true);
+        window.addEventListener('touchstart', handleGlobalEvent, true);
+        window.addEventListener('keydown', handleGlobalEvent, true);
+
+        return () => {
+            window.removeEventListener('click', handleGlobalEvent, true);
+            window.removeEventListener('touchstart', handleGlobalEvent, true);
+            window.removeEventListener('keydown', handleGlobalEvent, true);
+        };
+    }, [isTourActive]);
 
     const nextStep = () => {
         if (currentStepIndex < TOUR_STEPS.length - 1) {

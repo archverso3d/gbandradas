@@ -4,11 +4,13 @@ import { supabase } from '../services/supabaseClient';
 import { GraduationCard } from '../components/student/GraduationCard';
 import { CalendarComponent } from '../components/CalendarComponent';
 import { TechniqueVault } from '../components/student/TechniqueVault';
+import { WeightTracker } from '../components/student/WeightTracker';
 import { WeeklyCurriculum } from '../components/student/WeeklyCurriculum';
 import { TrainingHistory } from '../components/student/TrainingHistory';
 import { TechniqueHistory } from '../components/student/TechniqueHistory';
 import { TrainingFocusChart } from '../components/student/TrainingFocusChart';
-import { LogOut, User as UserIcon, Settings, Calendar, ArrowUp } from 'lucide-react';
+import { QuizSection } from '../components/student/QuizSection';
+import { LogOut, User as UserIcon, Settings, Calendar, ArrowUp, Star } from 'lucide-react';
 import { adminService } from '../services/admin';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +18,9 @@ import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculu
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { UserMural, MuralProfile } from '../components/student/UserMural';
 import { InstructionBalloon } from '../components/ui/InstructionBalloon';
+import { ShareReportTemplate } from '../components/student/ShareReportTemplate';
+import { ReportSummaryCard } from '../components/student/ReportSummaryCard';
+import { toPng } from 'html-to-image';
 
 const BELTS = [
     'Faixa Branca',
@@ -28,7 +33,7 @@ const BELTS = [
 ];
 
 // Types
-interface AttendanceRecord {
+export interface AttendanceRecord {
     id: string;
     date: string; // mapped from checkin_at
     status: 'present' | 'absent' | 'excused';
@@ -43,6 +48,7 @@ interface Graduation {
     promotion_date?: string;
     next_forecast?: string;
     student_category?: string;
+    quiz_achievements?: string[];
 }
 
 interface Technique {
@@ -70,6 +76,8 @@ const StudentArea: React.FC = () => {
     const [currentWeek, setCurrentWeek] = useState<number>(getCurrentCurriculumWeek());
     const [techniqueLinks, setTechniqueLinks] = useState<Record<string, string>>({});
     const [showBackToTop, setShowBackToTop] = useState(false);
+    const [sharing, setSharing] = useState(false);
+    const shareTemplateRef = React.useRef<HTMLDivElement>(null);
     const notification = useNotification();
 
     // Show/hide back to top button based on scroll
@@ -88,11 +96,27 @@ const StudentArea: React.FC = () => {
             if (!user) {
                 navigate('/');
             } else {
-                console.log('StudentArea: Fetching data for user:', user.id, 'Profile:', profile);
+
                 fetchData(user.id);
                 setCurrentWeek(getCurrentCurriculumWeek());
                 // Load technique links for curriculum
                 adminService.getTechniqueLinks().then(setTechniqueLinks).catch(console.error);
+
+                // Monthly Share Reminder
+                const lastSharePrompt = localStorage.getItem(`share_prompt_${user.id}`);
+                const now = new Date();
+                const currentMonthYear = `${now.getMonth()}-${now.getFullYear()}`;
+                const isEndOfMonth = now.getDate() >= 25; // Last days of month
+
+                if (isEndOfMonth && lastSharePrompt !== currentMonthYear) {
+                    setTimeout(() => {
+                        notification.alert(
+                            'Parabéns pela sua evolução este mês! Que tal compartilhar seu relatório com a galera no Instagram?',
+                            'Hora de Compartilhar!'
+                        );
+                        localStorage.setItem(`share_prompt_${user.id}`, currentMonthYear);
+                    }, 3000);
+                }
             }
         }
     }, [user, authLoading, navigate, profile]); // Added profile to dependencies
@@ -105,7 +129,7 @@ const StudentArea: React.FC = () => {
             let activeStudentCategory: string = 'GB2';
 
             if (isPeer) {
-                console.log('👥 Fetching peer profile data for:', userId);
+
 
                 // Allow using peer profile from mural if DB fetch fails (e.g., demo mock users)
                 const fallbackGraduation: Graduation = {
@@ -150,13 +174,25 @@ const StudentArea: React.FC = () => {
 
                     if (!gradError && gradDataArray && gradDataArray.length > 0) {
                         const gradData = gradDataArray[0];
-                        setGraduation(prev => ({
-                            ...prev!,
-                            ...gradData,
-                            current_belt: gradData.current_belt || prev?.current_belt || activeGraduation?.current_belt || 'Faixa Branca',
-                            degrees: gradData.degrees ?? prev?.degrees ?? activeGraduation?.degrees ?? 0
-                        }));
+                        setGraduation(prev => {
+                            // PRIORITIZE: If we have data from Mural (prev) that says anything other than "Faixa Branca", 
+                            // and the DB says "Faixa Branca" (default), stick with the Mural data.
+                            const muralBelt = prev?.current_belt || activeGraduation?.current_belt;
+                            const dbBelt = gradData.current_belt;
+
+                            const finalBelt = (dbBelt && dbBelt !== 'Faixa Branca')
+                                ? dbBelt
+                                : (muralBelt || 'Faixa Branca');
+
+                            return {
+                                ...prev!,
+                                ...gradData,
+                                current_belt: finalBelt,
+                                degrees: gradData.degrees ?? prev?.degrees ?? activeGraduation?.degrees ?? 0
+                            };
+                        });
                     }
+
                 }
             } else if (profile) {
                 activeGraduation = {
@@ -164,18 +200,23 @@ const StudentArea: React.FC = () => {
                     degrees: profile.degrees || 0,
                     start_date: profile.start_date || (profile as any).created_at,
                     next_forecast: (profile as any).next_graduation_date,
-                    student_category: profile.student_category || 'GB2'
+                    student_category: profile.student_category || 'GB2',
+                    quiz_achievements: profile.quiz_achievements || []
                 };
                 setGraduation(activeGraduation);
             }
 
             // Fetch Attendance
-            console.log(`📅 Fetching attendance for ${isPeer ? 'peer' : 'user'}:`, userId);
+
             const attData = await adminService.getStudentAttendance(userId);
             if (attData) {
-                console.log(`✅ Fetched ${attData.length} attendance records`);
+
                 const formattedAtt = attData.map((item: any) => {
                     const date = new Date(item.checkin_at);
+                    if (isNaN(date.getTime())) {
+                        console.error('Invalid date found:', item.checkin_at);
+                        return null;
+                    }
                     const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     return {
                         id: item.id,
@@ -184,8 +225,8 @@ const StudentArea: React.FC = () => {
                         classLabel: item.class_label,
                         weekNumber: getCurrentCurriculumWeek(date)
                     };
-                });
-                setAttendance(formattedAtt);
+                }).filter(Boolean);
+                setAttendance(formattedAtt as AttendanceRecord[]);
             }
 
             // Fetch Techniques
@@ -306,7 +347,7 @@ const StudentArea: React.FC = () => {
 
         // Optimistic update
         const tempId = Math.random().toString();
-        console.log('Adding technique (Optimistic):', { ...newTech, id: tempId });
+
         setTechniques([{ ...newTech, id: tempId } as Technique, ...techniques]);
 
         if (localStorage.getItem('demo_mode') === 'true') {
@@ -334,10 +375,12 @@ const StudentArea: React.FC = () => {
             console.error('Error adding technique:', error);
             // Revert
             setTechniques(prev => prev.filter(t => t.id !== tempId));
+            notification.alert(`Não foi possível salvar sua técnica: ${error.message || 'Erro de conexão com o banco'}`, 'Erro ao Salvar');
         } else if (data) {
-            console.log('Technique saved successfully:', data);
+
             // Replace temp with real
             setTechniques(prev => prev.map(t => t.id === tempId ? data : t));
+            notification.alert('Técnica salva com sucesso!', 'Sucesso');
         }
     };
 
@@ -441,6 +484,112 @@ const StudentArea: React.FC = () => {
         }
     };
 
+    const handleShare = async () => {
+        if (!shareTemplateRef.current) return;
+
+        let generatedBlob: Blob | null = null;
+        const el = shareTemplateRef.current;
+        const wrapper = el.parentElement as HTMLDivElement | null;
+
+        try {
+            setSharing(true);
+            notification.alert('Preparando seu relatório...', 'Gerando Imagem');
+
+            // Move template on-screen so Recharts SVG can measure properly
+            if (wrapper) {
+                wrapper.style.position = 'fixed';
+                wrapper.style.top = '0';
+                wrapper.style.left = '0';
+                wrapper.style.zIndex = '-1';
+                wrapper.style.opacity = '0';
+                wrapper.style.pointerEvents = 'none';
+            }
+
+            // Wait for DOM re-layout
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            // Use toPng (better mobile compat) — run twice to fix lazy-loaded font/style issues
+            await toPng(el, { quality: 0.8, width: 1080, height: 1080, pixelRatio: 1, cacheBust: true, backgroundColor: '#020617' });
+            const dataUrl = await toPng(el, {
+                quality: 0.9,
+                backgroundColor: '#020617',
+                width: 1080,
+                height: 1080,
+                pixelRatio: 1.5,
+                cacheBust: true
+            });
+
+            if (!dataUrl || dataUrl.length < 1000) {
+                throw new Error('A imagem gerada parece estar corrompida.');
+            }
+
+            // Convert dataURL to Blob
+            const res = await fetch(dataUrl);
+            generatedBlob = await res.blob();
+
+
+
+            const file = new File([generatedBlob], `meu-progresso-gb-${Date.now()}.png`, { type: 'image/png' });
+
+            const canShare = typeof navigator.share === 'function' &&
+                typeof navigator.canShare === 'function' &&
+                navigator.canShare({ files: [file] });
+
+            if (canShare) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Meu Progresso - Gracie Barra Andradas',
+                        text: 'Confira minha evolução na GB Andradas! #EquipeGB #GBAndradas'
+                    });
+                    return; // Shared successfully
+                } catch (shareError: any) {
+                    if (shareError.name === 'AbortError') return; // User cancelled
+                    console.warn('navigator.share failed, falling back to download:', shareError);
+                }
+            }
+
+            // Fallback: download the image directly
+            downloadBlob(generatedBlob);
+        } catch (error: any) {
+            console.error('Error sharing report:', error);
+            if (generatedBlob) {
+                downloadBlob(generatedBlob);
+            } else {
+                notification.alert('Não foi possível gerar a imagem. Tente novamente.', 'Erro');
+            }
+        } finally {
+            // Restore template off-screen
+            if (wrapper) {
+                wrapper.style.position = 'absolute';
+                wrapper.style.top = '-9999px';
+                wrapper.style.left = '-9999px';
+                wrapper.style.zIndex = '';
+                wrapper.style.opacity = '';
+            }
+            setSharing(false);
+        }
+    };
+
+    const downloadBlob = (blob: Blob) => {
+        try {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `progresso-gb-${new Date().toISOString().split('T')[0]}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            notification.alert(
+                'A imagem foi baixada com sucesso!',
+                'Imagem Salva'
+            );
+        } catch {
+            notification.alert('Não foi possível baixar a imagem.', 'Erro');
+        }
+    };
+
     return (
         <div className="w-full bg-slate-100 dark:bg-slate-950 pt-20 sm:pt-24 lg:pt-32 pb-12 transition-colors duration-500 min-h-screen">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -488,153 +637,160 @@ const StudentArea: React.FC = () => {
                         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(0,0,0,0.5) 1px, transparent 0)`, backgroundSize: '4px 4px' }}></div>
                         <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-black/10 pointer-events-none"></div>
 
-
-                        <div className="flex items-center gap-4 sm:gap-6 w-full md:w-auto p-5 sm:p-6 relative z-10">
-                            <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center border-2 flex-shrink-0 shadow-xl group-hover:scale-105 transition-all duration-500 overflow-hidden ring-4 ${(() => {
-                                const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                if (belt.includes('white') || belt.includes('branca')) return 'bg-white border-slate-200 ring-slate-100 dark:ring-slate-200';
-                                return 'bg-white/10 border-white/20 ring-black/10';
-                            })()}`}>
-                                {(() => {
-                                    const avatarUrl = selectedMuralUser ? selectedMuralUser.avatar_url : user?.user_metadata?.avatar_url;
-                                    if (avatarUrl) {
-                                        return (
-                                            <img
-                                                src={avatarUrl}
-                                                alt="Profile"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        );
-                                    }
-                                    return <UserIcon className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />;
-                                })()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h1 className={`text-2xl sm:text-4xl font-black italic tracking-tighter truncate drop-shadow-md ${(() => {
+                        <div className="flex flex-col w-full h-full relative z-10">
+                            <div className="flex items-center gap-4 sm:gap-6 w-full p-5 sm:p-6">
+                                <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center border-2 flex-shrink-0 shadow-xl group-hover:scale-105 transition-all duration-500 overflow-hidden ring-4 ${(() => {
                                     const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                    if (belt.includes('white') || belt.includes('branca')) return 'text-slate-900';
-                                    return 'text-white';
+                                    if (belt.includes('white') || belt.includes('branca')) return 'bg-white border-slate-200 ring-slate-100 dark:ring-slate-200';
+                                    return 'bg-white/10 border-white/20 ring-black/10';
                                 })()}`}>
-                                    {selectedMuralUser ? `${selectedMuralUser.full_name?.split(' ')[0]}` : `${user?.user_metadata?.full_name?.split(' ')[0] || 'Visitante'}`}
-                                </h1>
-                                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 mt-1">
-                                    <p className={`text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] italic opacity-70 ${(() => {
+                                    {(() => {
+                                        const avatarUrl = selectedMuralUser ? selectedMuralUser.avatar_url : user?.user_metadata?.avatar_url;
+                                        if (avatarUrl) {
+                                            return (
+                                                <img
+                                                    src={avatarUrl}
+                                                    alt="Profile"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            );
+                                        }
+                                        return <UserIcon className="w-8 h-8 sm:w-12 sm:h-12 text-slate-400" />;
+                                    })()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h1 className={`text-2xl sm:text-4xl font-black italic tracking-tighter truncate drop-shadow-md flex items-center gap-3 ${(() => {
                                         const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                        if (belt.includes('white') || belt.includes('branca')) return 'text-slate-600';
+                                        if (belt.includes('white') || belt.includes('branca')) return 'text-slate-900';
                                         return 'text-white';
-                                    })()}`}>BEM-VINDO À SUA ÁREA EXCLUSIVA</p>
+                                    })()}`}>
+                                        {selectedMuralUser ? `${selectedMuralUser.full_name?.split(' ')[0]}` : `${user?.user_metadata?.full_name?.split(' ')[0] || 'Visitante'}`}
 
-                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                                        {/* Inline Belt Selector */}
-                                        <div className="relative group/select">
-                                            <select
-                                                disabled={!!selectedMuralUser}
-                                                value={graduation?.current_belt || 'Faixa Branca'}
-                                                onChange={(e) => handleUpdateGraduation({ current_belt: e.target.value })}
-                                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duo-btn-3d appearance-none cursor-pointer pr-8 outline-none ${(() => {
-                                                    const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                                    if (belt.includes('white') || belt.includes('branca')) return 'bg-white text-slate-800 shadow-[0_3px_0_0_#e2e8f0]';
-                                                    if (belt.includes('blue') || belt.includes('azul')) return 'bg-blue-600 text-white shadow-[0_3px_0_0_#1d4ed8]';
-                                                    if (belt.includes('purple') || belt.includes('roxa')) return 'bg-purple-600 text-white shadow-[0_3px_0_0_#6d28d9]';
-                                                    if (belt.includes('brown') || belt.includes('marrom')) return 'bg-[#4E342E] text-white shadow-[0_3px_0_0_#3e2723]';
-                                                    if (belt.includes('black') || belt.includes('preta')) return 'bg-slate-800 text-white shadow-[0_3px_0_0_#1e293b]';
-                                                    return 'bg-slate-700 text-white shadow-[0_3px_0_0_#334155]';
-                                                })()} ${selectedMuralUser ? 'cursor-default pointer-events-none pr-3' : 'hover:scale-105 active:scale-95'}`}
-                                            >
-                                                {BELTS.map(b => (
-                                                    <option key={b} value={b} className="text-slate-900 bg-white">{b}</option>
+                                        {/* Quiz Achievement Stars */}
+                                        {graduation?.quiz_achievements && graduation.quiz_achievements.length > 0 && (
+                                            <div className="flex gap-1 ml-2">
+                                                {graduation.quiz_achievements.map((belt) => (
+                                                    <Star
+                                                        key={belt}
+                                                        className="w-5 h-5 sm:w-8 sm:h-8 fill-amber-400 text-amber-500 drop-shadow-md animate-in zoom-in spin-in-12 duration-700"
+                                                    />
                                                 ))}
-                                            </select>
-                                            {!selectedMuralUser && (
-                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
+                                    </h1>
+                                    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 mt-1">
+                                        <p className={`text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] italic opacity-70 ${(() => {
+                                            const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                            if (belt.includes('white') || belt.includes('branca')) return 'text-slate-600';
+                                            return 'text-white';
+                                        })()}`}>BEM-VINDO À SUA ÁREA EXCLUSIVA</p>
 
-                                        {/* Inline Degree Selector */}
-                                        <div className="relative group/select">
-                                            <select
-                                                disabled={!!selectedMuralUser}
-                                                value={graduation?.degrees || 0}
-                                                onChange={(e) => handleUpdateGraduation({ degrees: parseInt(e.target.value) })}
-                                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duo-btn-3d appearance-none cursor-pointer pr-8 outline-none ${(() => {
-                                                    const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                                    if (belt.includes('white') || belt.includes('branca')) return 'bg-white text-slate-800 shadow-[0_3px_0_0_#e2e8f0]';
-                                                    if (belt.includes('blue') || belt.includes('azul')) return 'bg-blue-600 text-white shadow-[0_3px_0_0_#1d4ed8]';
-                                                    if (belt.includes('purple') || belt.includes('roxa')) return 'bg-purple-600 text-white shadow-[0_3px_0_0_#6d28d9]';
-                                                    if (belt.includes('brown') || belt.includes('marrom')) return 'bg-[#4E342E] text-white shadow-[0_3px_0_0_#3e2723]';
-                                                    if (belt.includes('black') || belt.includes('preta')) return 'bg-slate-800 text-white shadow-[0_3px_0_0_#1e293b]';
-                                                    return 'bg-slate-700 text-white shadow-[0_3px_0_0_#334155]';
-                                                })()} ${selectedMuralUser ? 'cursor-default pointer-events-none pr-3' : 'hover:scale-105 active:scale-95'}`}
-                                            >
-                                                {[0, 1, 2, 3, 4].map(d => (
-                                                    <option key={d} value={d} className="text-slate-900 bg-white">{d}º Grau</option>
-                                                ))}
-                                            </select>
-                                            {!selectedMuralUser && (
-                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
-                                            )}
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                            {/* Inline Belt Selector */}
+                                            <div className="relative group/select">
+                                                <select
+                                                    disabled={!!selectedMuralUser}
+                                                    value={graduation?.current_belt || 'Faixa Branca'}
+                                                    onChange={(e) => handleUpdateGraduation({ current_belt: e.target.value })}
+                                                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duo-btn-3d appearance-none cursor-pointer pr-8 outline-none ${(() => {
+                                                        const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                                        if (belt.includes('white') || belt.includes('branca')) return 'bg-white text-slate-800 shadow-[0_3px_0_0_#cbd5e1]';
+                                                        if (belt.includes('blue') || belt.includes('azul')) return 'bg-[#1976D2] text-white shadow-[0_3px_0_0_#0D47A1]';
+                                                        if (belt.includes('purple') || belt.includes('roxa')) return 'bg-[#7B1FA2] text-white shadow-[0_3px_0_0_#4A148C]';
+                                                        if (belt.includes('brown') || belt.includes('marrom')) return 'bg-[#4E342E] text-white shadow-[0_3px_0_0_#2D1B18]';
+                                                        if (belt.includes('black') || belt.includes('preta')) return 'bg-slate-800 text-white shadow-[0_3px_0_0_#0f0f0f]';
+                                                        return 'bg-slate-700 text-white shadow-[0_3px_0_0_#1e293b]';
+                                                    })()} ${selectedMuralUser ? 'cursor-default pointer-events-none pr-3' : 'hover:scale-105 active:scale-95'}`}
+                                                >
+                                                    {BELTS.map(b => (
+                                                        <option key={b} value={b} className="text-slate-900 bg-white">{b}</option>
+                                                    ))}
+                                                </select>
+                                                {!selectedMuralUser && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Inline Degree Selector */}
+                                            <div className="relative group/select">
+                                                <select
+                                                    disabled={!!selectedMuralUser}
+                                                    value={graduation?.degrees || 0}
+                                                    onChange={(e) => handleUpdateGraduation({ degrees: parseInt(e.target.value) })}
+                                                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duo-btn-3d appearance-none cursor-pointer pr-8 outline-none ${(() => {
+                                                        const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                                        if (belt.includes('white') || belt.includes('branca')) return 'bg-white text-slate-800 shadow-[0_3px_0_0_#cbd5e1]';
+                                                        if (belt.includes('blue') || belt.includes('azul')) return 'bg-[#1976D2] text-white shadow-[0_3px_0_0_#0D47A1]';
+                                                        if (belt.includes('purple') || belt.includes('roxa')) return 'bg-[#7B1FA2] text-white shadow-[0_3px_0_0_#4A148C]';
+                                                        if (belt.includes('brown') || belt.includes('marrom')) return 'bg-[#4E342E] text-white shadow-[0_3px_0_0_#2D1B18]';
+                                                        if (belt.includes('black') || belt.includes('preta')) return 'bg-slate-800 text-white shadow-[0_3px_0_0_#0f0f0f]';
+                                                        return 'bg-slate-700 text-white shadow-[0_3px_0_0_#1e293b]';
+                                                    })()} ${selectedMuralUser ? 'cursor-default pointer-events-none pr-3' : 'hover:scale-105 active:scale-95'}`}
+                                                >
+                                                    {[0, 1, 2, 3, 4].map(d => (
+                                                        <option key={d} value={d} className="text-slate-900 bg-white">{d}º Grau</option>
+                                                    ))}
+                                                </select>
+                                                {!selectedMuralUser && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Belt Tip (Ponteira) & Stripes Section */}
-                        <div className="flex flex-col md:flex-row items-center gap-3 relative z-10 w-full md:w-auto h-full px-5 pb-5 md:pb-0 md:pr-0 self-stretch">
-                            <div className="flex items-center gap-2 self-start md:self-center">
                                 {isAdmin && (
-                                    <button
-                                        onClick={() => navigate('/admin')}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] italic transition-all duo-btn-3d min-h-[40px] ${(() => {
-                                            const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                            if (belt.includes('white') || belt.includes('branca')) return 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white shadow-[0_3px_0_0_#e2e8f0] dark:shadow-[0_3px_0_0_#0f172a]';
-                                            return 'bg-white/10 text-white hover:bg-white/20 shadow-[0_3px_0_0_rgba(0,0,0,0.2)]';
-                                        })()}`}
-                                        aria-label="Ir para painel administrativo"
-                                    >
-                                        <Settings className="w-3.5 h-3.5" />
-                                        <span>Admin</span>
-                                    </button>
+                                    <div className="hidden md:flex items-center gap-2">
+                                        <button
+                                            onClick={() => navigate('/admin')}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] italic transition-all duo-btn-3d min-h-[40px] ${(() => {
+                                                const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                                if (belt.includes('white') || belt.includes('branca')) return 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white shadow-[0_3px_0_0_#e2e8f0] dark:shadow-[0_3px_0_0_#0f172a]';
+                                                return 'bg-white/10 text-white hover:bg-white/20 shadow-[0_3px_0_0_rgba(0,0,0,0.2)]';
+                                            })()}`}
+                                            aria-label="Ir para painel administrativo"
+                                        >
+                                            <Settings className="w-3.5 h-3.5" />
+                                            <span>Admin</span>
+                                        </button>
+                                    </div>
                                 )}
-
                             </div>
-                        </div>
 
-                        {/* The Actual Belt Tip (Physical Representation) */}
-                        <div className="hidden md:flex items-stretch relative pointer-events-none self-stretch">
-                            {/* Ponteira (Tip) Container - straight vertical block at end of belt */}
-                            <div className={`relative flex items-center h-full min-h-[120px] w-32 sm:w-40 border-l-4 border-black/30 ${(() => {
-                                const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
-                                if (belt.includes('black') || belt.includes('preta')) return 'bg-red-700';
-                                return 'bg-slate-950';
-                            })()}`}>
-                                {/* Degree Stripes (Graus) - vertical white bars */}
-                                <div className="flex gap-3 sm:gap-4 items-center justify-center w-full h-full px-4">
-                                    {Array.from({ length: graduation?.degrees || 0 }).map((_, i) => (
-                                        <div
-                                            key={i}
-                                            className="w-[10px] sm:w-[14px] h-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.5)] border-x border-black/5 animate-in fade-in zoom-in duration-300"
-                                            style={{ animationDelay: `${i * 100}ms` }}
-                                        />
-                                    ))}
+                            {/* Refined Bottom Bar with 'Ponteira' Block on the Right */}
+                            <div className="mt-auto border-t border-black/20 flex items-stretch h-9 relative overflow-hidden">
+                                {/* Left side - clean space with subtle category badge */}
+                                <div className="flex-1 px-5 flex items-center">
+                                    <div className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[8px] font-black italic text-white/40 tracking-wider">
+                                        {graduation?.student_category || 'GB2'}
+                                    </div>
+                                </div>
+
+                                {/* Ponteira (Belt Tip) - Distinct block on the right */}
+                                <div className={`flex items-center justify-center min-w-[100px] sm:min-w-[120px] px-4 shadow-[-2px_0_8px_rgba(0,0,0,0.2)] ${(() => {
+                                    const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                    if (belt.includes('black') || belt.includes('preta')) return 'bg-red-700';
+                                    return 'bg-[#0a0a0a]';
+                                })()}`}>
+                                    {/* Degree Stripes */}
+                                    <div className="flex gap-2 items-center">
+                                        {Array.from({ length: graduation?.degrees || 0 }).map((_, i) => (
+                                            <div
+                                                key={i}
+                                                className="w-[5px] h-7 bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)] rounded-sm animate-in fade-in zoom-in duration-300"
+                                                style={{ animationDelay: `${i * 100}ms` }}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Mobile Degrees Display */}
-                        <div className="md:hidden flex items-center gap-1.5 absolute right-4 bottom-4 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                            {Array.from({ length: graduation?.degrees || 0 }).map((_, i) => (
-                                <div key={i} className="w-1.5 h-6 bg-white rounded-full shadow-lg" />
-                            ))}
-                            <span className="text-[10px] font-black text-white ml-1 uppercase">{graduation?.degrees || 0}º GRAU</span>
                         </div>
                     </div>
                 </div>
@@ -674,22 +830,75 @@ const StudentArea: React.FC = () => {
                             studentCategory={graduation?.student_category || 'GB2'}
                         />
 
-                        {/* Training Focus Chart */}
-                        <TrainingFocusChart
+                        {/* Unified Performance Report Card */}
+                        <ReportSummaryCard
                             attendanceData={attendance}
+                            onShare={handleShare}
+                            sharing={sharing}
+                            currentBelt={graduation?.current_belt || 'Faixa Branca'}
+                            degrees={graduation?.degrees || 0}
+                            completedClasses={attendance.filter(r => (['present', 'presente', 'a', 'b', 'n', 'p'].includes(r.status.toLowerCase()))).length}
+                            performance={Math.round((attendance.filter(r => (['present', 'presente', 'a', 'b', 'n', 'p'].includes(r.status.toLowerCase()))).length / Math.max(1, attendance.length)) * 100)}
+                            streak={(() => {
+                                if (attendance.length === 0) return 0;
+
+                                // Group into weeks
+                                const weeksMap = new Set<string>();
+                                attendance.forEach(record => {
+                                    if (['present', 'presente', 'a', 'b', 'n', 'p'].includes(record.status.toLowerCase())) {
+                                        const date = new Date(record.date + 'T12:00:00');
+                                        const target = new Date(date.valueOf());
+                                        const dayNr = (date.getDay() + 6) % 7;
+                                        target.setDate(target.getDate() - dayNr + 3);
+                                        const firstThursday = target.valueOf();
+                                        target.setMonth(0, 1);
+                                        if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+                                        const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+                                        weeksMap.add(`${target.getFullYear()}-${weekNum}`);
+                                    }
+                                });
+
+                                let streak = 0;
+                                let cursorDate = new Date();
+                                cursorDate.setHours(12, 0, 0, 0);
+
+                                for (let i = 0; i < 52; i++) {
+                                    const target = new Date(cursorDate.valueOf());
+                                    const dayNr = (cursorDate.getDay() + 6) % 7;
+                                    target.setDate(target.getDate() - dayNr + 3);
+                                    const firstThursday = target.valueOf();
+                                    target.setMonth(0, 1);
+                                    if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+                                    const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+                                    const weekId = `${target.getFullYear()}-${weekNum}`;
+
+                                    if (weeksMap.has(weekId)) {
+                                        streak++;
+                                    } else {
+                                        if (i !== 0) break; // Allow gap in current week
+                                    }
+                                    cursorDate.setDate(cursorDate.getDate() - 7);
+                                }
+                                return streak;
+                            })()}
                         />
+
+                        {/* BJJ Rules Quiz */}
+                        {(graduation?.current_belt || '').toLowerCase().match(/azul|roxa|marrom|preta/) && (
+                            <QuizSection currentBelt={graduation?.current_belt || ''} />
+                        )}
 
                         {/* Graduation Card */}
                         <GraduationCard
                             currentBelt={graduation?.current_belt || 'Faixa Branca'}
+                            degrees={graduation?.degrees || 0}
                             startDate={graduation?.start_date || '2024-01-01'}
                             lastPromotionDate={graduation?.promotion_date}
                             nextForecast={graduation?.next_forecast}
                         />
                     </div>
 
-                    {/* Right Column: Content/Techniques */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 space-y-8">
                         <TechniqueVault
                             techniques={techniques}
                             onAddTechnique={handleAddTechnique}
@@ -700,7 +909,25 @@ const StudentArea: React.FC = () => {
                             title={selectedMuralUser ? `Técnicas de ${selectedMuralUser.full_name?.split(' ')[0]}` : "Minhas Técnicas"}
                             isLoading={loading}
                         />
+
+                        <WeightTracker
+                            userId={selectedMuralUser ? selectedMuralUser.user_id : (user?.id || '')}
+                            readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
+                        />
                     </div>
+                </div>
+
+                {/* Hidden Template for Image Generation */}
+                <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', pointerEvents: 'none' }}>
+                    <ShareReportTemplate
+                        ref={shareTemplateRef}
+                        userName={selectedMuralUser ? selectedMuralUser.full_name || 'Aluno' : user?.user_metadata?.full_name || 'Aluno'}
+                        userAvatar={selectedMuralUser ? selectedMuralUser.avatar_url : user?.user_metadata?.avatar_url}
+                        currentBelt={graduation?.current_belt || 'Faixa Branca'}
+                        degrees={graduation?.degrees || 0}
+                        startDate={graduation?.start_date || '2024-01-01'}
+                        attendanceData={attendance}
+                    />
                 </div>
 
                 {/* Floating Back to Top Button */}

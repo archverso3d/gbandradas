@@ -1,6 +1,37 @@
 <!-- markdownlint-disable MD024 -->
 # CHANGELOG - Gracie Barra Andradas
 
+## [0.8.2] - 2026-02-27 12:00 BRT
+
+### ✨ Features & Improvements
+
+- **Deployment**: Updated version and metadata.
+- **Maintenance**: General system checks and deployment verification.
+
+## [0.8.1] - 2026-02-23 00:25 BRT
+
+### ✨ Features & Improvements
+
+- **Deployment**: Full production deployment with latest features and fixes.
+- **UI/UX**: Updated informational balloons (tour) logic for first-time access.
+- **UI/UX**: Improvements to Student Area and Technique History visibility.
+- **Features**: Attendance calendar integration in share report template.
+- **Fixes**: Resolved belt rank display consistency between profile and community.
+
+---
+
+## [0.8.0] - 2026-02-22 23:30 BRT
+
+### ✨ Features & Improvements
+
+- **Security**: Implemented Soft Delete for users with 72h recovery period.
+- **UI/UX**: Redesigned Technique History for better visual consistency.
+- **UI/UX**: Enhanced Instruction Balloons with better positioning and blinking attention effect.
+- **Persistence**: Fixed technique saving and persistence after logout.
+- **Auth**: Fixed redirection logic after login (Admin vs Student).
+
+---
+
 ## [0.7.2] - 2026-02-03 22:56 BRT
 
 ### 🚀 Deployment & Updates

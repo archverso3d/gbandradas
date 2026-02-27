@@ -91,45 +91,59 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
 
     return (
         <div className="relative mb-8">
-            <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 overflow-hidden transition-all hover:shadow-2xl relative">
+            <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 transition-all hover:shadow-2xl relative">
                 {/* Header / Week Selector */}
-                <div className={`p-4 sm:p-5 text-white cursor-pointer select-none relative overflow-hidden group`} onClick={() => setIsExpanded(!isExpanded)}>
-                    <div className={`absolute inset-0 ${themeColor} transition-colors duration-500`}></div>
-                    <div className="absolute inset-x-0 bottom-0 h-1.5 bg-black/20"></div>
+                <div className={`p-4 sm:p-5 text-white cursor-pointer select-none relative group ${isExpanded ? 'rounded-t-[28px]' : 'rounded-[28px]'}`} onClick={() => setIsExpanded(!isExpanded)}>
+                    <div className={`absolute inset-0 ${themeColor} transition-colors duration-500 ${isExpanded ? 'rounded-t-[28px]' : 'rounded-[28px]'}`}></div>
+                    <div className={`absolute inset-x-0 bottom-0 h-1.5 bg-black/20 ${!isExpanded ? 'rounded-b-[28px]' : ''}`}></div>
 
-                    <div className="flex items-center justify-between max-w-4xl mx-auto relative z-10">
-                        <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
-                            <div className="p-2 bg-white/10 backdrop-blur-md rounded-2xl flex-shrink-0 border border-white/20 group-hover:scale-110 transition-transform">
-                                <Shield className="w-5 h-5 sm:w-5 sm:h-5 text-white" />
-                            </div>
-                            <div className="flex items-center gap-2 sm:gap-5 flex-1 min-w-0">
-                                <button
-                                    onClick={handlePrevWeek}
-                                    className="p-1.5 sm:p-2 hover:bg-white/10 rounded-xl transition-all duo-btn-3d active:translate-y-0.5 active:shadow-none bg-white/5 border border-white/10"
-                                >
-                                    <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                                </button>
-                                <div className="text-left min-w-0 flex flex-col items-center sm:items-start">
-                                    <h2 className="text-xl sm:text-3xl font-black uppercase italic tracking-tighter leading-none whitespace-nowrap drop-shadow-md">Semana {selectedWeek}</h2>
-                                    <p className="text-[9px] sm:text-[10px] font-black opacity-80 uppercase tracking-[0.3em] mt-1 italic">Currículo Semanal</p>
-                                </div>
-                                <button
-                                    onClick={handleNextWeek}
-                                    className="p-1.5 sm:p-2 hover:bg-white/10 rounded-xl transition-all duo-btn-3d active:translate-y-0.5 active:shadow-none bg-white/5 border border-white/10"
-                                >
-                                    <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-                                </button>
+                    <div className="flex items-center justify-between max-w-5xl mx-auto relative z-10 w-full gap-1 sm:gap-4 px-1 sm:px-2">
+                        {/* 1. Shield Icon */}
+                        <div className="flex-shrink-0">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 group-hover:scale-110 transition-transform shadow-lg shadow-black/10">
+                                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
-                            <div className="hidden lg:flex gap-2 mr-4">
-                                <span className="px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-xl text-[10px] font-black uppercase tracking-[0.2em] italic border border-white/30">
-                                    {program === 'gb1' ? 'Programa GB1' : 'Programa GB2'}
-                                </span>
+                        {/* Center Navigation Group */}
+                        <div className="flex items-center justify-center gap-1 sm:gap-6 flex-1 min-w-0">
+                            {/* Previous Week Button */}
+                            <button
+                                onClick={handlePrevWeek}
+                                className="w-9 h-9 sm:w-11 sm:h-11 flex justify-center items-center bg-white/10 backdrop-blur-md rounded-2xl transition-all hover:bg-white/20 active:translate-y-0.5 active:shadow-none border border-white/30 flex-shrink-0 shadow-[0_4px_0_0_rgba(0,0,0,0.2)] group/prev"
+                            >
+                                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 group-hover/prev:-translate-x-0.5 transition-transform" />
+                            </button>
+
+                            {/* Center Text */}
+                            <div className="text-center min-w-0 px-2 sm:px-4">
+                                <h2 className="text-base sm:text-3xl font-black uppercase italic tracking-tighter leading-none whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+                                    Semana {selectedWeek}
+                                </h2>
+                                <p className="text-[7px] sm:text-[11px] font-black opacity-90 uppercase tracking-[0.1em] sm:tracking-[0.3em] mt-0.5 sm:mt-1.5 italic whitespace-nowrap overflow-hidden text-ellipsis">
+                                    Currículo Semanal
+                                </p>
                             </div>
-                            <button className="relative p-1 sm:p-2 bg-white/10 rounded-full transition-all hover:bg-white/20">
-                                {isExpanded ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
+
+                            {/* Next Week Button */}
+                            <button
+                                onClick={handleNextWeek}
+                                className="w-9 h-9 sm:w-11 sm:h-11 flex justify-center items-center bg-white/10 backdrop-blur-md rounded-2xl transition-all hover:bg-white/20 active:translate-y-0.5 active:shadow-none border border-white/30 flex-shrink-0 shadow-[0_4px_0_0_rgba(0,0,0,0.2)] group/next"
+                            >
+                                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover/next:translate-x-0.5 transition-transform" />
+                            </button>
+                        </div>
+
+                        {/* 5. Expand Button */}
+                        <div className="flex-shrink-0 relative">
+                            <button
+                                className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-white/10 backdrop-blur-md rounded-2xl transition-all hover:bg-white/20 active:translate-y-0.5 border border-white/30 shadow-[0_4px_0_0_rgba(0,0,0,0.2)]"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsExpanded(!isExpanded);
+                                }}
+                            >
+                                {isExpanded ? <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6" /> : <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6" />}
                                 <InstructionBalloon
                                     id="curriculum-expand"
                                     text="Clique aqui para expandir o programa semanal e acompanhar as técnicas."
@@ -142,7 +156,7 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
                 </div>
 
                 {/* Collapsible Content */}
-                <div className={`transition-all duration-700 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className={`transition-all duration-700 ease-in-out ${isExpanded ? 'max-h-[3000px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                     {/* Program Switcher */}
                     <div className="bg-slate-50 dark:bg-slate-900 p-4 flex justify-center gap-4 border-b border-slate-100 dark:border-slate-800">
                         <button
@@ -176,7 +190,7 @@ export const WeeklyCurriculum: React.FC<WeeklyCurriculumProps> = ({ currentBelt,
                         </div>
                     </div>
 
-                    <div className="p-6 sm:p-10 bg-white dark:bg-[#0F172A]">
+                    <div className="p-6 sm:p-10 bg-white dark:bg-[#0F172A] rounded-b-[28px]">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-20 relative">
                             <div className={`hidden lg:block absolute left-1/2 top-4 bottom-4 w-px ${program === 'gb1' ? 'bg-blue-500' : 'bg-purple-500'} opacity-20 -translate-x-1/2`}></div>
 

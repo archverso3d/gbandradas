@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info, Heart } from 'lucide-react';
+import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info, Heart, Users } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { useNotification } from '../../context/NotificationContext';
 import { curriculumData } from '../../constants/curriculumData';
@@ -89,13 +89,17 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
         { id: 'default-100kg', name: '100KG', color: 'Slate' },
         { id: 'default-americana', name: 'AMERICANA', color: 'Pink' },
         { id: 'default-armlock', name: 'ARMLOCK', color: 'Blue' },
-        { id: 'default-berimbolo', name: 'BERIMBOLO', color: 'Purple' },
-        { id: 'default-choke', name: 'CHOKE', color: 'Indigo' },
+        { id: 'default-berimbolo', name: 'BERIMBOLO', color: 'Red' },
+        { id: 'default-choke', name: 'CHOKE', color: 'Red' },
+        { id: 'default-curso', name: 'CURSO', color: 'Slate' },
+        { id: 'default-dril', name: 'DRIL', color: 'Purple' },
         { id: 'default-pegada', name: 'EST. PEGADA', color: 'Amber' },
-        { id: 'default-estrangulamento', name: 'ESTRANGULAMENTO', color: 'Indigo' },
+        { id: 'default-estrangulamento', name: 'ESTRANGULAMENTO', color: 'Pink' },
         { id: 'default-montada', name: 'MONTADA', color: 'Green' },
         { id: 'default-movimentacao', name: 'MOVIMENTAÇÃO', color: 'Purple' },
+        { id: 'default-nogi', name: 'NO-GI', color: 'Slate' },
         { id: 'default-omoplata', name: 'OMOPLATA', color: 'Slate' },
+        { id: 'default-relogio', name: 'RELOGIO', color: 'Purple' },
         { id: 'default-triangulo', name: 'TRIANGULO', color: 'Blue' },
     ];
 
@@ -375,8 +379,18 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                     '100kg': 'Slate',
                     'americana': 'Pink',
                     'armlock': 'Blue',
-                    'choke': 'Indigo',
-                    'estrangulamento': 'Indigo'
+                    'berimbolo': 'Red',
+                    'choke': 'Red',
+                    'curso': 'Slate',
+                    'dril': 'Purple',
+                    'est. pegada': 'Amber',
+                    'estrangulamento': 'Pink',
+                    'montada': 'Green',
+                    'movimentação': 'Purple',
+                    'no-gi': 'Slate',
+                    'omoplata': 'Slate',
+                    'relogio': 'Purple',
+                    'triangulo': 'Blue'
                 };
                 colorName = legacyMap[categoryName.toLowerCase()] || 'Slate';
             }
@@ -675,7 +689,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                         <InstructionBalloon
                             id="category-creation-guide"
                             text="Para criar uma nova categoria, clique no botão + e digite o nome. Exemplos: QUEDAS, PASSAGENS, FINALIZAÇÕES ou DRILLS."
-                            position="bottom"
+                            position="bottom-right"
                         />
                     </div>
                 )}
@@ -775,6 +789,26 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
                                 Confira as técnicas oficiais do currículo desta semana (Semana {currentWeekNum})
                             </p>
+
+                            {!readOnly && (
+                                <div className="mt-6 flex flex-col items-center gap-3">
+                                    <div className="h-px w-20 bg-slate-200 dark:bg-slate-800"></div>
+                                    <button
+                                        onClick={() => {
+                                            const mural = document.getElementById('community-mural');
+                                            if (mural) {
+                                                mural.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            } else {
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] italic hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all duo-btn-3d shadow-[0_4px_0_0_#e2e8f0] dark:shadow-[0_4px_0_0_#0f172a] active:translate-y-1 active:shadow-none"
+                                    >
+                                        <Users className="w-4 h-4" />
+                                        Navegar na Comunidade
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto text-left px-4 pb-4">
@@ -879,8 +913,25 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                                                                     <div className={`p-3 rounded-2xl ${style.bg} ${style.text} group-hover:scale-110 transition-transform duration-500`}>
                                                                         {getPlatformIcon(tech.platform)}
                                                                     </div>
+                                                                    {readOnly && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                onAddTechnique({
+                                                                                    title: tech.title,
+                                                                                    link: tech.link,
+                                                                                    category: tech.category,
+                                                                                    category_id: tech.category_id,
+                                                                                    platform: tech.platform
+                                                                                });
+                                                                            }}
+                                                                            className="px-3 py-1.5 bg-blue-600 text-white rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-all active:scale-95"
+                                                                            title="Importar para meu cofre"
+                                                                        >
+                                                                            <Plus className="w-3.5 h-3.5" /> Importar
+                                                                        </button>
+                                                                    )}
                                                                     {!readOnly && (
-                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all text-slate-900 dark:text-slate-100">
                                                                             <button
                                                                                 onClick={() => startEditingTechnique(tech)}
                                                                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -952,22 +1003,41 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                                                     <div className={`p-3 rounded-2xl ${style.bg} dark:bg-slate-800/80 ${style.text} dark:text-slate-300 group-hover:scale-110 transition-transform duration-500`}>
                                                         {getPlatformIcon(tech.platform)}
                                                     </div>
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                    {readOnly && (
                                                         <button
-                                                            onClick={() => startEditingTechnique(tech)}
-                                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
-                                                            title="Editar Técnica"
+                                                            onClick={() => {
+                                                                onAddTechnique({
+                                                                    title: tech.title,
+                                                                    link: tech.link,
+                                                                    category: tech.category,
+                                                                    category_id: tech.category_id,
+                                                                    platform: tech.platform
+                                                                });
+                                                            }}
+                                                            className="px-3 py-1.5 bg-blue-600 text-white rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-all active:scale-95"
+                                                            title="Importar para meu cofre"
                                                         >
-                                                            <Edit2 className="w-4 h-4" />
+                                                            <Plus className="w-3.5 h-3.5" /> Importar
                                                         </button>
-                                                        <button
-                                                            onClick={() => onDeleteTechnique(tech.id)}
-                                                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                                            title="Excluir Técnica"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
+                                                    )}
+                                                    {!readOnly && (
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all text-slate-900 dark:text-slate-100">
+                                                            <button
+                                                                onClick={() => startEditingTechnique(tech)}
+                                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                                                                title="Editar Técnica"
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => onDeleteTechnique(tech.id)}
+                                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                                                title="Excluir Técnica"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors mb-2">

@@ -13,6 +13,7 @@ export interface StudentProfile {
     start_date: string | null;
     phone: string | null;
     student_category: string | null;
+    quiz_achievements: string[] | null;
     deleted_at: string | null;
     deleted_by: string | null;
 }
@@ -43,7 +44,7 @@ export const adminService = {
      */
     async updateStudentDetails(userId: string, updates: Partial<StudentProfile>) {
         if (isDemoMode()) {
-            console.log('🚀 [DEMO] Updating student details locally');
+
             const profileStr = localStorage.getItem('demo_profile');
             if (profileStr) {
                 const currentProfile = JSON.parse(profileStr);
@@ -67,7 +68,7 @@ export const adminService = {
      */
     async markAttendance(userId: string, weekNumber?: number, classLabel?: string, date: Date = new Date()) {
         if (isDemoMode()) {
-            console.log('📝 [DEMO] Marking attendance locally');
+
             const attendance = getMockData('attendance');
             const newRecord = {
                 id: Math.random().toString(36).substr(2, 9),
@@ -151,23 +152,40 @@ export const adminService = {
 
         const { data: { user } } = await supabase.auth.getUser();
 
-        const { data, error } = await supabase
+        // 1. Fetch techniques first to ensure they are returned
+        const { data: techniques, error: techError } = await supabase
             .from('saved_techniques')
-            .select(`
-                *,
-                likes_count:technique_likes(count),
-                is_liked:technique_likes!left(user_id)
-            `)
+            .select('*')
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (techError) throw techError;
+        if (!techniques || techniques.length === 0) return [];
 
-        // Formatar os dados para simplificar o uso no frontend
-        return data.map((t: any) => ({
+        // 2. Fetch likes for these techniques
+        const techniqueIds = techniques.map(t => t.id);
+        const { data: likesData, error: likesError } = await supabase
+            .from('technique_likes')
+            .select('technique_id, user_id')
+            .in('technique_id', techniqueIds);
+
+        const countsMap: Record<string, number> = {};
+        const userLikesSet = new Set<string>();
+
+        if (!likesError && likesData) {
+            likesData.forEach((l: any) => {
+                countsMap[l.technique_id] = (countsMap[l.technique_id] || 0) + 1;
+                if (user?.id && l.user_id === user.id) {
+                    userLikesSet.add(l.technique_id);
+                }
+            });
+        }
+
+        // 3. Map everything back
+        return techniques.map((t: any) => ({
             ...t,
-            likes_count: t.likes_count?.[0]?.count || 0,
-            is_liked: t.is_liked?.some((l: any) => l.user_id === user?.id) || false
+            likes_count: countsMap[t.id] || 0,
+            is_liked: userLikesSet.has(t.id)
         }));
     },
 
@@ -179,7 +197,7 @@ export const adminService = {
         if (!user) throw new Error('User not authenticated');
 
         if (isDemoMode()) {
-            console.log(`👍 [DEMO] ${isLiked ? 'Unliking' : 'Liking'} technique locally`);
+
             const likes = getMockData('technique_likes');
             if (isLiked) {
                 const filtered = likes.filter((l: any) => !(l.technique_id === techniqueId && l.user_id === user.id));
@@ -203,9 +221,14 @@ export const adminService = {
                 .match({ user_id: user.id, technique_id: techniqueId });
             if (error) throw error;
         } else {
+            // upsert with ignoreDuplicates guards against rapid double-clicks
+            // — the DB UNIQUE constraint on (user_id, technique_id) is the primary guard
             const { error } = await supabase
                 .from('technique_likes')
-                .insert([{ user_id: user.id, technique_id: techniqueId }]);
+                .upsert(
+                    [{ user_id: user.id, technique_id: techniqueId }],
+                    { onConflict: 'user_id,technique_id', ignoreDuplicates: true }
+                );
             if (error) throw error;
         }
     },
@@ -291,7 +314,7 @@ export const adminService = {
                     return migrated;
                 }
             } catch (error) {
-                console.log('Aviso: Não foi possível carregar da versão web, usando cache local', error);
+
             }
             // Fallback para o cache local
             return migrateLinks(getMockData('demo_technique_links') || {});
@@ -315,7 +338,7 @@ export const adminService = {
                 // Tenta salvar na versão web (Supabase) mesmo estando no ambiente local/demo
                 await this.updateSetting('technique_links', links);
             } catch (error) {
-                console.log('Aviso: Não foi possível sincronizar com a versão web', error);
+
             }
             return;
         }
@@ -327,7 +350,7 @@ export const adminService = {
      */
     async deleteStudent(userId: string) {
         if (isDemoMode()) {
-            console.log('🗑️ [DEMO] Soft Deleting student locally');
+
             return;
         }
 
@@ -350,7 +373,7 @@ export const adminService = {
      */
     async restoreStudent(userId: string) {
         if (isDemoMode()) {
-            console.log('♻️ [DEMO] Restoring student locally');
+
             return;
         }
 
@@ -370,7 +393,7 @@ export const adminService = {
      */
     async permanentlyDeleteStudent(userId: string) {
         if (isDemoMode()) {
-            console.log('🔥 [DEMO] Hard deleting student locally');
+
             return;
         }
 
@@ -407,6 +430,44 @@ export const adminService = {
         } catch (err) {
             console.error('Error in isAdmin check:', err);
             return false;
+        }
+    },
+
+    /**
+     * Save a quiz achievement for a user
+     */
+    async saveQuizAchievement(userId: string, belt: string) {
+        if (isDemoMode()) {
+
+            const profileStr = localStorage.getItem('demo_profile');
+            if (profileStr) {
+                const profile = JSON.parse(profileStr);
+                const achievements = profile.quiz_achievements || [];
+                if (!achievements.includes(belt)) {
+                    profile.quiz_achievements = [...achievements, belt];
+                    localStorage.setItem('demo_profile', JSON.stringify(profile));
+                }
+            }
+            return;
+        }
+
+        // First, fetch current achievements
+        const { data: profile, error: fetchError } = await supabase
+            .from('user_profiles')
+            .select('quiz_achievements')
+            .eq('user_id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const currentAchievements = profile?.quiz_achievements || [];
+        if (!currentAchievements.includes(belt)) {
+            const { error } = await supabase
+                .from('user_profiles')
+                .update({ quiz_achievements: [...currentAchievements, belt] })
+                .eq('user_id', userId);
+
+            if (error) throw error;
         }
     }
 };

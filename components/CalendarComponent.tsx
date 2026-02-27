@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Clock, Trash2, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Clock, Trash2, Plus, X, Layers } from 'lucide-react';
 import { InstructionBalloon } from './ui/InstructionBalloon';
 
 export interface AttendanceRecord {
@@ -42,6 +42,10 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
     const [pendingDate, setPendingDate] = useState<Date | null>(null);
     const [pendingDeleteDate, setPendingDeleteDate] = useState<string | null>(null);
     const [isGuideDismissed, setIsGuideDismissed] = useState(false);
+
+    // Multi-day batch mode
+    const [batchMode, setBatchMode] = useState(false);
+    const [batchMarked, setBatchMarked] = useState<string[]>([]);
 
     const currentMonth = viewDate.getMonth();
     const currentYear = viewDate.getFullYear();
@@ -109,6 +113,19 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
 
         const record = getStatusForDay(day);
 
+        // Batch mode: click directly marks/skips present days
+        if (batchMode) {
+            if (!record || !isPresentStatus(record.status)) {
+                const d = new Date(currentYear, currentMonth, day);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                if (onMarkPast && !batchMarked.includes(dateStr)) {
+                    setBatchMarked(prev => [...prev, dateStr]);
+                    onMarkPast(dateStr);
+                }
+            }
+            return;
+        }
+
         if (record && isPresentStatus(record.status)) {
             // Already present -> Show Delete Balloon
             if (onRemoveAttendance) {
@@ -128,6 +145,15 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
         const dateStr = `${pendingDate.getFullYear()}-${String(pendingDate.getMonth() + 1).padStart(2, '0')}-${String(pendingDate.getDate()).padStart(2, '0')}`;
         onMarkPast(dateStr);
         setPendingDate(null);
+    };
+
+    const toggleBatchMode = () => {
+        setBatchMode(prev => {
+            if (prev) setBatchMarked([]); // reset on exit
+            return !prev;
+        });
+        setPendingDate(null);
+        setPendingDeleteDate(null);
     };
 
     const confirmDeleteAttendance = () => {
@@ -212,13 +238,11 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
 
                 {/* Days Grid (Even more compact) */}
                 <div className="relative">
-                    {isStudentNotAdmin && !hasRecordedAttendance && (
-                        <InstructionBalloon
-                            id="calendar-past-days"
-                            text="Toque nos dias para registrar treinos passados."
-                            position="top"
-                        />
-                    )}
+                    <InstructionBalloon
+                        id="calendar-past-days"
+                        text="Toque nos dias para registrar treinos passados."
+                        position="top-right"
+                    />
                     <div className="grid grid-cols-7 gap-2 relative z-0">
                         {blanks.map((_, i) => (
                             <div key={`blank-${i}`} className="aspect-square"></div>
@@ -344,31 +368,49 @@ export const CalendarComponent: React.FC<CalendarComponentProps> = ({
             {/* Attendance Buttons (Smaller UI) - Moved to bottom and redesigned */}
             {!readOnly && !isAdmin && (
                 <div className="flex flex-col gap-3 mt-4 relative">
-                    {isStudentNotAdmin && !hasRecordedAttendance && (
-                        <InstructionBalloon
-                            id="calendar-mark-today"
-                            text="Marque sua presença de hoje aqui!"
-                            position="top"
-                        />
-                    )}
+                    <InstructionBalloon
+                        id="calendar-mark-today"
+                        text="Marque sua presença de hoje aqui!"
+                        position="top-right"
+                    />
+
+                    {/* Batch Mode Toggle Button */}
+                    <button
+                        onClick={toggleBatchMode}
+                        className={`
+                            flex items-center justify-center gap-3 py-3 rounded-[1.25rem] font-black uppercase tracking-[0.15em] italic text-sm transition-all
+                            ${batchMode
+                                ? 'bg-amber-500 hover:bg-amber-400 text-white border-b-[6px] border-amber-700 active:border-b-0 active:translate-y-1.5 shadow-lg shadow-amber-500/20 animate-pulse'
+                                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border-x-2 border-t-2 border-b-4 border-slate-200 dark:border-slate-900'
+                            }
+                        `}
+                    >
+                        <Layers className="w-4 h-4" />
+                        {batchMode ? `Registrando... (${batchMarked.length} dia${batchMarked.length !== 1 ? 's' : ''})` : 'Registrar Vários Treinos'}
+                    </button>
+
+                    {/* Main: Concluir Hoje / Concluir (batch) */}
                     <button
                         onClick={(e) => {
-                            if (onMarkToday) {
-                                // Prevent double clicks or passing Event object if not expected
+                            if (batchMode) {
+                                toggleBatchMode();
+                            } else if (onMarkToday) {
                                 onMarkToday();
                             }
                         }}
-                        disabled={isTodayMarked}
+                        disabled={!batchMode && isTodayMarked}
                         className={`
                             flex items-center justify-center gap-3 py-4 rounded-[1.25rem] font-black uppercase tracking-[0.15em] italic text-sm transition-all shadow-lg
-                            ${isTodayMarked
-                                ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 cursor-not-allowed border-x-2 border-t-2 border-b-4 border-slate-100 dark:border-slate-800 shadow-none'
-                                : 'bg-emerald-500 hover:bg-emerald-400 text-white border-b-[6px] border-emerald-700 active:border-b-0 active:translate-y-1.5 shadow-emerald-500/20'
+                            ${batchMode
+                                ? 'bg-emerald-500 hover:bg-emerald-400 text-white border-b-[6px] border-emerald-700 active:border-b-0 active:translate-y-1.5 shadow-emerald-500/20'
+                                : isTodayMarked
+                                    ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 cursor-not-allowed border-x-2 border-t-2 border-b-4 border-slate-100 dark:border-slate-800 shadow-none'
+                                    : 'bg-emerald-500 hover:bg-emerald-400 text-white border-b-[6px] border-emerald-700 active:border-b-0 active:translate-y-1.5 shadow-emerald-500/20'
                             }
                         `}
                     >
                         <CheckCircle2 className="w-5 h-5" />
-                        {isTodayMarked ? 'TREINO CONCLUÍDO' : 'CONCLUIR HOJE'}
+                        {batchMode ? 'CONCLUIR' : isTodayMarked ? 'TREINO CONCLUÍDO' : 'CONCLUIR HOJE'}
                     </button>
                 </div>
             )}

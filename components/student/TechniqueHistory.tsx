@@ -133,19 +133,19 @@ export const TechniqueHistory: React.FC<TechniqueHistoryProps> = ({ attendanceDa
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                        <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-500/20">
-                            <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1 min-h-[100px] bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 flex flex-col justify-between">
+                            <div className="flex justify-between items-start">
                                 <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Currículo GB1</span>
-                                <Award className="w-4 h-4 opacity-50" />
+                                <Award className="w-5 h-5 opacity-50" />
                             </div>
-                            <div className="text-2xl font-black italic">{stats.totalGB1} / 96</div>
+                            <div className="text-3xl font-black italic mt-2">{stats.totalGB1} / 96</div>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl p-4 text-white shadow-lg shadow-purple-500/20">
-                            <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1 min-h-[100px] bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl p-5 text-white shadow-lg shadow-purple-500/20 flex flex-col justify-between">
+                            <div className="flex justify-between items-start">
                                 <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Currículo GB2</span>
-                                <Award className="w-4 h-4 opacity-50" />
+                                <Award className="w-5 h-5 opacity-50" />
                             </div>
-                            <div className="text-2xl font-black italic">{stats.totalGB2} / 96</div>
+                            <div className="text-3xl font-black italic mt-2">{stats.totalGB2} / 96</div>
                         </div>
                     </div>
 
@@ -183,21 +183,23 @@ export const TechniqueHistory: React.FC<TechniqueHistoryProps> = ({ attendanceDa
                             </div>
                         ) : (
                             filteredTechniques.map((tech, idx) => (
-                                <div key={`${tech.program}-${tech.number}-${idx}`} className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/60 hover:shadow-md transition-all group">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-[10px] font-black text-white shadow-sm transition-transform group-hover:scale-110 ${tech.program === 'GB1' ? 'bg-blue-600' : 'bg-purple-700'}`}>
+                                <div key={`${tech.program}-${tech.number}-${idx}`} className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/60 hover:shadow-md transition-all group">
+                                    <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xs font-black text-white shadow-md transition-all group-hover:scale-110 ${tech.program === 'GB1' ? 'bg-blue-600 ring-2 ring-blue-500/20' : 'bg-purple-700 ring-2 ring-purple-500/20'}`}>
                                         {tech.number}
                                     </div>
-                                    <div className="flex-grow min-w-0">
-                                        <div className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight truncate italic">
+                                    <div className="flex-grow min-w-0 pt-1">
+                                        <div className="text-[13px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight italic leading-snug whitespace-normal break-words">
                                             {tech.title}
                                         </div>
-                                        <div className="flex items-center gap-2 mt-1">
+                                        <div className="flex items-center gap-2 mt-2">
                                             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Semana {tech.week}</span>
                                             <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700"></span>
                                             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">{tech.section}</span>
                                         </div>
                                     </div>
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                    <div className="pt-1">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                    </div>
                                 </div>
                             ))
                         )}

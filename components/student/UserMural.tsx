@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabaseClient';
-import { User as UserIcon, Users, Trophy } from 'lucide-react';
+import { User as UserIcon, Users, Trophy, Star } from 'lucide-react';
 
 export interface MuralProfile {
     user_id: string;
@@ -10,6 +10,7 @@ export interface MuralProfile {
     degrees?: number;
     student_category?: string;
     technique_count?: number;
+    quiz_achievements?: string[];
 }
 
 interface UserMuralProps {
@@ -31,7 +32,7 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
             // Fetch all profiles. Note: RLS must allow this!
             const { data, error } = await supabase
                 .from('user_profiles')
-                .select('user_id, full_name, avatar_url, current_belt, degrees, student_category')
+                .select('user_id, full_name, avatar_url, current_belt, degrees, student_category, quiz_achievements')
                 .order('full_name');
 
             if (localStorage.getItem('demo_mode') === 'true') {
@@ -55,11 +56,11 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
                 }
 
                 const mockUsers: any[] = [
-                    { user_id: 'demo-1', full_name: 'Mestre Carlos', avatar_url: null, current_belt: 'Faixa Preta', technique_count: 12, latest_update: Date.now() - 100000 },
-                    { user_id: 'demo-2', full_name: 'Ana Silva', avatar_url: null, current_belt: 'Faixa Azul', technique_count: 5, latest_update: Date.now() - 500000 },
-                    { user_id: 'demo-3', full_name: 'Bruno Ramos', avatar_url: null, current_belt: 'Faixa Roxa', technique_count: 8, latest_update: Date.now() - 200000 },
-                    { user_id: 'demo-4', full_name: 'Carla Dias', avatar_url: null, current_belt: 'Faixa Marrom', technique_count: 3, latest_update: Date.now() - 800000 },
-                    { user_id: demoId, full_name: 'Admin', avatar_url: null, current_belt: 'Faixa Branca', technique_count: currentTechniqueCount, latest_update: latestDemoUpdate }
+                    { user_id: 'demo-1', full_name: 'Mestre Carlos', avatar_url: null, current_belt: 'Faixa Preta', technique_count: 12, latest_update: Date.now() - 100000, quiz_achievements: ['preta'] },
+                    { user_id: 'demo-2', full_name: 'Ana Silva', avatar_url: null, current_belt: 'Faixa Azul', technique_count: 5, latest_update: Date.now() - 500000, quiz_achievements: ['azul'] },
+                    { user_id: 'demo-3', full_name: 'Bruno Ramos', avatar_url: null, current_belt: 'Faixa Roxa', technique_count: 8, latest_update: Date.now() - 200000, quiz_achievements: ['roxa'] },
+                    { user_id: 'demo-4', full_name: 'Carla Dias', avatar_url: null, current_belt: 'Faixa Marrom', technique_count: 3, latest_update: Date.now() - 800000, quiz_achievements: ['marrom'] },
+                    { user_id: demoId, full_name: 'Admin', avatar_url: null, current_belt: 'Faixa Branca', technique_count: currentTechniqueCount, latest_update: latestDemoUpdate, quiz_achievements: [] }
                 ];
 
                 mockUsers.sort((a, b) => {
@@ -241,6 +242,19 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
                             <Trophy className="w-2.5 h-2.5" />
                         </div>
                     )}
+
+                    {/* Quiz Stars */}
+                    {profile.quiz_achievements && profile.quiz_achievements.length > 0 && (
+                        <div className="absolute -right-1 -bottom-1 flex -space-x-1 z-20 drop-shadow-sm">
+                            {profile.quiz_achievements.map((belt, idx) => (
+                                <Star
+                                    key={belt}
+                                    className={`w-3 h-3 fill-amber-400 text-amber-500 border border-white rounded-full bg-white p-[1px]`}
+                                    style={{ zIndex: 10 - idx }}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="text-center transition-all">
@@ -259,7 +273,7 @@ export const UserMural: React.FC<UserMuralProps> = ({ currentUserId, onSelectUse
     const otherUsers = users.filter(u => u.user_id !== currentUserId);
 
     return (
-        <div className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 mb-6 transition-all hover:shadow-md">
+        <div id="community-mural" className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 mb-6 transition-all hover:shadow-md">
             <div className="flex items-center justify-between mb-3 px-1">
                 <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
                     <Users className="w-3.5 h-3.5 text-blue-600" />

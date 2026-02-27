@@ -47,9 +47,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     // Redirect when context confirms user is authenticated
     React.useEffect(() => {
         if (redirectPending && user) {
-            onClose();
-            navigate(redirectPending);
+            console.log('🚀 [LoginModal] Successful login. Navigating to:', redirectPending);
+            navigate(redirectPending, { replace: true });
             setRedirectPending(null);
+            onClose();
         }
     }, [redirectPending, user, navigate, onClose]);
 
@@ -61,6 +62,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const handleGoogleLogin = async () => {
         setError('');
         setLoading(true);
+
+        // Clear any stuck demo mode
+        localStorage.removeItem('demo_user_id');
+        localStorage.removeItem('demo_mode');
+        localStorage.removeItem('demo_profile');
+
         try {
             const { error: oauthError } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
@@ -104,6 +111,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             }
 
             if (mode === 'login') {
+                // Clear demo mode before regular login
+                localStorage.removeItem('demo_user_id');
+                localStorage.removeItem('demo_mode');
+                localStorage.removeItem('demo_profile');
+
                 const effectiveEmail = email.trim().toLowerCase() === 'admin' ? 'admin@admin.com' : email.trim().toLowerCase();
                 console.log('Tentando login com:', effectiveEmail);
                 const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -135,6 +147,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     }
                 }
             } else {
+                // Clear demo mode before sign up
+                localStorage.removeItem('demo_user_id');
+                localStorage.removeItem('demo_mode');
+                localStorage.removeItem('demo_profile');
+
                 const { data, error: signUpError } = await supabase.auth.signUp({
                     email,
                     password,

@@ -5,6 +5,8 @@ import Schedule from '../components/Schedule';
 import { SCHOOL_INFO } from '../constants/schoolInfo';
 
 const Home: React.FC = () => {
+
+
     return (
         <main>
             <Hero />

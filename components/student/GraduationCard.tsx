@@ -3,6 +3,7 @@ import { Award, Calendar, TrendingUp } from 'lucide-react';
 
 interface GraduationCardProps {
     currentBelt: string;
+    degrees?: number;
     startDate: string; // ISO date string
     lastPromotionDate?: string; // ISO date string
     nextForecast?: string; // ISO date string
@@ -11,6 +12,7 @@ interface GraduationCardProps {
 
 export const GraduationCard: React.FC<GraduationCardProps> = ({
     currentBelt,
+    degrees = 0,
     startDate,
     lastPromotionDate,
     nextForecast,
@@ -43,8 +45,16 @@ export const GraduationCard: React.FC<GraduationCardProps> = ({
                     <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic flex items-center gap-2 drop-shadow-sm">
                         Minha Graduação
                     </h2>
-                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-transform group-hover:-rotate-2 ${getBeltStyles(currentBelt)}`}>
+                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-transform group-hover:-rotate-2 flex items-center gap-2 ${getBeltStyles(currentBelt)}`}>
                         {currentBelt}
+                        {degrees > 0 && (
+                            <span className="flex gap-0.5 ml-1">
+                                {Array.from({ length: degrees }).map((_, i) => (
+                                    <span key={i} className={`w-1 h-3 rounded-full ${currentBelt.toLowerCase().includes('white') || currentBelt.toLowerCase().includes('branca') ? 'bg-slate-300' : 'bg-white/40'}`} />
+                                ))}
+                                <span className="ml-1 opacity-80">{degrees}º GRAU</span>
+                            </span>
+                        )}
                     </span>
                 </div>
                 <div className="p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50">

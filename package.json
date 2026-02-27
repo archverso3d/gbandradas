@@ -1,7 +1,7 @@
 {
   "name": "gracie-barra-andradas",
   "private": true,
-  "version": "0.7.9",
+  "version": "0.8.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "@google/genai": "^1.37.0",
     "@supabase/supabase-js": "^2.90.1",
     "framer-motion": "^12.34.3",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

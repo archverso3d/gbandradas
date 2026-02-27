@@ -98,7 +98,7 @@ const AdminPanel: React.FC = () => {
         if (!selectedStudent) return;
 
         try {
-            console.log('Saving student updates:', selectedStudent);
+
             await adminService.updateStudentDetails(selectedStudent.user_id, {
                 current_belt: selectedStudent.current_belt,
                 degrees: selectedStudent.degrees,
@@ -271,8 +271,8 @@ const AdminPanel: React.FC = () => {
                             <button
                                 onClick={() => { setViewMode('active'); setSelectedStudent(null); }}
                                 className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'active'
-                                        ? 'bg-slate-900 text-white dark:bg-slate-800'
-                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                    ? 'bg-slate-900 text-white dark:bg-slate-800'
+                                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                                     }`}
                             >
                                 Ativos ({activeCount})
@@ -280,8 +280,8 @@ const AdminPanel: React.FC = () => {
                             <button
                                 onClick={() => { setViewMode('trash'); setSelectedStudent(null); }}
                                 className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'trash'
-                                        ? 'bg-red-600 text-white'
-                                        : 'text-slate-500 hover:text-red-500'
+                                    ? 'bg-red-600 text-white'
+                                    : 'text-slate-500 hover:text-red-500'
                                     }`}
                             >
                                 <Users className="w-3.5 h-3.5" />

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Flame, History, CheckCircle2 } from 'lucide-react';
 import { InstructionBalloon } from '../ui/InstructionBalloon';
 
@@ -39,6 +39,7 @@ const getYearWeek = (dateStr: string) => {
 };
 
 export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData, studentStartDate, studentCategory }) => {
+    const [showAllHistory, setShowAllHistory] = useState(false);
 
     const stats = useMemo(() => {
         if (!attendanceData) {
@@ -61,7 +62,15 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
 
         // Calculate Stats
         const now = new Date();
-        const start = new Date(studentStartDate + 'T12:00:00');
+        let start = new Date(studentStartDate + 'T12:00:00');
+
+        // Safety check for invalid date string
+        if (isNaN(start.getTime())) {
+            console.error('TrainingHistory: Invalid studentStartDate:', studentStartDate);
+            start = new Date();
+            start.setMonth(start.getMonth() - 1); // Fallback to 1 month ago
+        }
+
         const totalClasses = attendanceData.filter(r => isPresent(r.status)).length;
 
         // Count weeks with 0 training from start until now
@@ -135,7 +144,7 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
 
     return (
         <div className="mb-8 relative">
-            <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 overflow-hidden mb-8 transition-all hover:shadow-2xl relative">
+            <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 overflow-visible mb-8 transition-all hover:shadow-2xl relative">
                 <div className="p-5">
                     <div className="flex items-center justify-between mb-8 px-1">
                         <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic drop-shadow-sm">Histórico de Treinos</h2>
@@ -164,6 +173,12 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
                             </div>
                         </div>
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 -mr-8 -mt-8 rounded-full blur-2xl"></div>
+                    </div>
+
+                    {/* Section Labels */}
+                    <div className="flex justify-between items-center mb-4 px-1">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] italic">Semanas</span>
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] italic">Realizadas/Perdidas</span>
                     </div>
 
                     {/* Sub Stats */}
@@ -210,7 +225,7 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
                                 <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">Nenhum treino encontrado</p>
                             </div>
                         ) : (
-                            stats.history.slice(0, 4).map((record) => {
+                            (showAllHistory ? stats.history : stats.history.slice(0, 4)).map((record) => {
                                 const dateInfo = formatDate(record.date);
 
                                 const getFullLabel = (label: string | undefined) => {
@@ -259,8 +274,11 @@ export const TrainingHistory: React.FC<TrainingHistoryProps> = ({ attendanceData
                     </div>
                 </div>
                 {stats.history.length > 4 && (
-                    <button className="w-full py-5 bg-slate-50 dark:bg-slate-800/30 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border-t border-slate-100 dark:border-slate-800 italic">
-                        Ver Histórico Completo
+                    <button
+                        onClick={() => setShowAllHistory(!showAllHistory)}
+                        className="w-full py-5 bg-slate-50 dark:bg-slate-800/30 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border-t border-slate-100 dark:border-slate-800 italic"
+                    >
+                        {showAllHistory ? 'Ver Menos' : 'Ver Histórico Completo'}
                     </button>
                 )}
             </div>

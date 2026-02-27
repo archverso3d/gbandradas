@@ -18,6 +18,16 @@ export const InstructionBalloon: React.FC<InstructionBalloonProps> = ({
 }) => {
     const { currentStepId, nextStep } = useTour();
     const isVisible = currentStepId === id;
+    const [balloonRef, setBalloonRef] = useState<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (isVisible && balloonRef) {
+            // Give it a tiny delay to ensure layout is calculated before scrolling
+            setTimeout(() => {
+                balloonRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [isVisible, balloonRef]);
 
     const handleDismiss = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -57,16 +67,22 @@ export const InstructionBalloon: React.FC<InstructionBalloonProps> = ({
         <AnimatePresence>
             {isVisible && (
                 <motion.div
+                    ref={setBalloonRef}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
                     variants={animationVariants}
                     transition={{ type: 'spring', stiffness: 500, damping: 30, mass: 0.8 }}
-                    className={`absolute z-[200] w-72 p-4 bg-white rounded-2xl shadow-[0_12px_40px_-10px_rgba(0,0,0,0.15),0_4px_12px_-4px_rgba(0,0,0,0.1)] border border-blue-100 ring-4 ring-blue-50/50 ${positionClasses[position]} ${className}`}
+                    className={`instruction-balloon absolute z-[9999] w-72 p-4 bg-white rounded-2xl shadow-[0_12px_40px_-10px_rgba(0,0,0,0.15),0_4px_12px_-4px_rgba(0,0,0,0.1)] border border-blue-100 ring-4 ring-blue-50/50 ${positionClasses[position]} ${className}`}
                     onClick={handleDismiss}
                 >
                     <div className="flex items-start gap-4 relative cursor-pointer group">
-                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-inner shadow-blue-400/20 ring-2 ring-blue-50">
+                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-inner shadow-blue-400/20 ring-2 ring-blue-50 relative group-hover:scale-105 transition-transform">
+                            {/* Blinking pulse indicator */}
+                            <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 z-10">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 duration-1000"></span>
+                                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 border-2 border-white"></span>
+                            </span>
                             <Info size={20} className="text-white drop-shadow-sm" />
                         </div>
                         <div className="flex-1 pt-0.5">

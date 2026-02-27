@@ -42,11 +42,7 @@ export const getAuthRedirectUrl = (path: string = 'auth/callback') => {
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     const finalUrl = `${baseUrl}${cleanPath}`;
 
-    // Log with clear identification for debugging recurring issues
-    console.log('--- [AUTH] Redirect Handler ---');
-    console.log('Context:', isProd ? 'PRODUCTION' : 'DEVELOPMENT');
-    console.log('Source Origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
-    console.log('Target URL:', finalUrl);
+
 
     return finalUrl;
 };

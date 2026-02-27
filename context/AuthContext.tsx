@@ -11,6 +11,7 @@ interface AuthProfile {
     degrees: number;
     start_date: string | null;
     student_category: string | null;
+    quiz_achievements: string[] | null;
 }
 
 interface AuthContextType {
@@ -148,7 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         current_belt: 'Faixa Branca',
                         degrees: 0,
                         start_date: new Date().toISOString(),
-                        student_category: 'GB1'
+                        student_category: 'GB1',
+                        quiz_achievements: []
                     };
 
                     localStorage.setItem('demo_profile', JSON.stringify(mockProfile));
@@ -207,6 +209,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             // For other events, update the session and user if they changed
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                if (event === 'SIGNED_IN') {
+                    // Real user logged in via Supabase - clear any stuck demo mode
+                    localStorage.removeItem('demo_user_id');
+                    localStorage.removeItem('demo_mode');
+                    localStorage.removeItem('demo_profile');
+                }
+
                 setSession(currentSession);
                 setUser(currentSession?.user ?? null);
 
@@ -280,7 +289,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             current_belt: 'Faixa Branca',
             degrees: 0,
             start_date: new Date().toISOString(),
-            student_category: 'GB1'
+            student_category: 'GB1',
+            quiz_achievements: []
         };
 
         localStorage.setItem('demo_user_id', demoId);

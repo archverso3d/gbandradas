@@ -30,13 +30,29 @@ const Navbar: React.FC = () => {
   }, []);
 
   const navLinks = [
-    { name: 'Programas', href: '/#programas' },
-    { name: 'Horários', href: '/#horarios' },
-    { name: 'Instrutores', href: '/#instrutores' },
-    { name: 'Sobre Nós', href: '/#sobre' },
-    { name: 'Contato', href: '/#contato' },
+    { name: 'Programas', href: '/#programas', sectionId: 'programas' },
+    { name: 'Horários', href: '/#horarios', sectionId: 'horarios' },
+    { name: 'Instrutores', href: '/#instrutores', sectionId: 'instrutores' },
+    { name: 'Sobre Nós', href: '/#sobre', sectionId: 'sobre' },
+    { name: 'Contato', href: '/#contato', sectionId: 'contato' },
     { name: 'Loja', href: 'https://www.gbwear.com.br/', isExternal: true },
   ];
+
+  const handleNavLinkClick = (link: typeof navLinks[0], closeMenu = false) => {
+    if (closeMenu) setMobileMenuOpen(false);
+    if (link.isExternal) {
+      window.open(link.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (location.pathname === '/') {
+      // Already on home, just scroll to section
+      const el = document.getElementById(link.sectionId!);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      // Navigate to home with the hash; React Router handles this
+      navigate(link.href);
+    }
+  };
 
   // Check if current location matches a nav link
   const isActiveLink = (href: string) => {
@@ -68,11 +84,9 @@ const Navbar: React.FC = () => {
             <div className="hidden lg:flex items-center space-x-1">
               <div className="flex items-center bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-md rounded-full p-1.5 mr-4 border border-white/20 dark:border-gray-700/30">
                 {navLinks.map((link) => (
-                  <a
+                  <button
                     key={link.name}
-                    href={link.href}
-                    target={link.isExternal ? '_blank' : undefined}
-                    rel={link.isExternal ? 'noopener noreferrer' : undefined}
+                    onClick={() => handleNavLinkClick(link)}
                     className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-full flex items-center gap-2 ${showSolidNavbar
                       ? 'text-slate-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:text-red-600'
                       : 'text-slate-200 hover:bg-white/10 hover:text-white'
@@ -80,7 +94,7 @@ const Navbar: React.FC = () => {
                   >
                     {link.name === 'Loja' && <ShoppingBag className="w-3.5 h-3.5" />}
                     {link.name}
-                  </a>
+                  </button>
                 ))}
               </div>
 
@@ -179,18 +193,17 @@ const Navbar: React.FC = () => {
           <div className="px-6 py-8 space-y-6">
             <div className="flex flex-col space-y-2">
               {navLinks.map((link) => (
-                <a
+                <button
                   key={link.name}
-                  href={link.href}
-                  className="px-4 py-4 min-h-[44px] text-slate-900 font-black uppercase text-sm tracking-widest border-b border-gray-50 flex items-center justify-between group active:bg-slate-50 rounded-xl transition-all"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => handleNavLinkClick(link, true)}
+                  className="w-full text-left px-4 py-4 min-h-[44px] text-slate-900 font-black uppercase text-sm tracking-widest border-b border-gray-50 flex items-center justify-between group active:bg-slate-50 rounded-xl transition-all"
                 >
                   <div className="flex items-center gap-3">
                     {link.name === 'Loja' && <ShoppingBag className="w-5 h-5 text-red-600" />}
                     {link.name}
                   </div>
                   <span className="w-2 h-2 rounded-full bg-red-600 opacity-0 group-active:opacity-100 transition-opacity"></span>
-                </a>
+                </button>
               ))}
             </div>
 

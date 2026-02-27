@@ -103,15 +103,15 @@ export const TrainingFocusChart: React.FC<TrainingFocusChartProps> = ({ attendan
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-                    <p className="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2 uppercase tracking-wider">{label}</p>
+                <div className="bg-white dark:bg-[#020617] p-3 rounded-[20px] shadow-2xl border-[3px] border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+                    <p className="font-black text-[10px] text-slate-800 dark:text-slate-200 mb-2 uppercase tracking-[0.2em] italic">{label}</p>
                     {payload.map((entry: any, index: number) => {
                         if (entry.value === null || entry.value === 0) return null;
                         return (
                             <div key={`item-${index}`} className="flex items-center gap-2 mb-1">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                                    {entry.name}: <span className="font-bold text-slate-900 dark:text-white">{entry.value}</span>
+                                <span className="w-2.5 h-2.5 rounded-md shadow-sm" style={{ backgroundColor: entry.color }}></span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                                    {entry.name}: <span className="font-bold text-slate-900 dark:text-white drop-shadow-sm">{entry.value}</span>
                                 </span>
                             </div>
                         );
@@ -158,29 +158,29 @@ export const TrainingFocusChart: React.FC<TrainingFocusChartProps> = ({ attendan
 
     return (
         <div className="mb-8 relative">
-            <InstructionBalloon
-                id="training-focus"
-                text="Acompanhe o foco dos seus treinos com este gráfico de teia. Veja onde você tem mais horas de tatame!"
-                position="bottom"
-                className="!z-[110]"
-            />
-            <div className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-xl border-2 border-slate-200 dark:border-slate-800/50 overflow-hidden transition-all hover:shadow-2xl relative">
-                <div className="p-5">
+            <div className="bg-white dark:bg-[#0F172A] rounded-[32px] shadow-xl border-[3px] border-slate-200 dark:border-slate-800 p-5 sm:p-6 transition-all hover:shadow-2xl relative group">
+                <div className="p-0">
                     <div className="flex items-center justify-between mb-6 px-1">
                         <div className="flex items-center gap-3">
                             <h2 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest italic drop-shadow-sm">
-                                Foco de Treinamento
+                                Treinos Especificos Realizados
                             </h2>
                         </div>
-                        <div className="p-2 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 relative">
                             <Target className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                            <InstructionBalloon
+                                id="training-focus"
+                                text="Acompanhe o foco dos seus treinos com este gráfico de teia. Veja onde você tem mais horas de tatame!"
+                                position="bottom-right"
+                                className="!z-[110]"
+                            />
                         </div>
                     </div>
 
                     <div className="h-[300px] sm:h-[400px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="60%" data={chartData}>
-                                <PolarGrid stroke="#94a3b8" strokeOpacity={0.3} />
+                            <RadarChart cx="50%" cy="50%" outerRadius="65%" data={chartData}>
+                                <PolarGrid stroke="#94a3b8" strokeOpacity={0.2} />
                                 <PolarAngleAxis
                                     dataKey="subject"
                                     tick={<CustomTick />}
@@ -200,17 +200,21 @@ export const TrainingFocusChart: React.FC<TrainingFocusChartProps> = ({ attendan
                                     name="Programa GB1"
                                     dataKey="GB1"
                                     stroke="#2563eb"
-                                    strokeWidth={3}
+                                    strokeWidth={4}
                                     fill="#3b82f6"
                                     fillOpacity={0.4}
+                                    animationBegin={200}
+                                    animationDuration={1500}
                                 />
                                 <Radar
                                     name="Programa GB2"
                                     dataKey="GB2"
                                     stroke="#9333ea"
-                                    strokeWidth={3}
+                                    strokeWidth={4}
                                     fill="#a855f7"
                                     fillOpacity={0.4}
+                                    animationBegin={500}
+                                    animationDuration={1500}
                                 />
                             </RadarChart>
                         </ResponsiveContainer>

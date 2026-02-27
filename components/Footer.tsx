@@ -12,14 +12,7 @@ const Footer: React.FC = () => {
               Fundada sob os princípios da fraternidade, integridade e expansão do Jiu-Jitsu.
               Nossa escola é mais que um tatame, é uma família comprometida com o crescimento de cada aluno.
             </p>
-            <div className="flex space-x-4">
-              {['facebook', 'instagram', 'youtube'].map((social) => (
-                <a key={social} href="#" className="w-10 h-10 border border-gray-800 rounded-full flex items-center justify-center hover:border-red-600 hover:text-red-600 transition-all">
-                  <span className="sr-only">{social}</span>
-                  <div className="w-4 h-4 bg-current"></div>
-                </a>
-              ))}
-            </div>
+
           </div>
 
           <div>
@@ -55,7 +48,7 @@ const Footer: React.FC = () => {
           <p>&copy; 2026 Gracie Barra Andradas. Todos os direitos reservados.</p>
           <div className="flex flex-col items-center md:items-end gap-2 mt-4 md:mt-0">
             <p>Desenvolvido com excelência GB</p>
-            <p className="text-[10px] text-gray-600 font-medium lowercase italic">v0.7.9 - 22/02/2026 - 22:25</p>
+            <p className="text-[10px] text-gray-600 font-medium lowercase italic">v0.8.3 - 27/02/2026 - 14:30</p>
           </div>
         </div>
       </div>
