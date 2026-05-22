@@ -25,3 +25,10 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Local backups and diagnostic scripts
+backups/
+backup_*.sql
+diagnose_*.sql
+previous_*.tsx
+verify_*.ts

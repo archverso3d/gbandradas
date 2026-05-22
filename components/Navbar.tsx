@@ -126,17 +126,7 @@ const Navbar: React.FC = () => {
                       {loggingOut ? '...' : 'Sair'}
                     </button>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => setIsLoginOpen(true)}
-                    className={`px-6 py-2.5 rounded-full font-black uppercase text-[10px] tracking-[0.15em] transition-all ${showSolidNavbar
-                      ? 'bg-slate-900 text-white hover:bg-black shadow-lg shadow-slate-200'
-                      : 'bg-white text-slate-900 hover:bg-red-600 hover:text-white'
-                      }`}
-                  >
-                    Área do Aluno
-                  </button>
-                )}
+                ) : null}
 
                 <button
                   onClick={() => window.open(SCHOOL_INFO.whatsappUrl(), '_blank')}

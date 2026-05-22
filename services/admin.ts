@@ -10,6 +10,7 @@ export interface StudentProfile {
     current_belt: string;
     degrees: number;
     next_graduation_date: string | null;
+    last_promotion_date: string | null;
     start_date: string | null;
     phone: string | null;
     student_category: string | null;

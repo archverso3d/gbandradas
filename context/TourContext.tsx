@@ -51,7 +51,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (!isTourActive) return;
 
-        const handleGlobalEvent = (e: MouseEvent | TouchEvent | KeyboardEvent) => {
+        const handleGlobalEvent = (e: MouseEvent | TouchEvent) => {
             let target = e.target as HTMLElement | null;
             let isInsideBalloon = false;
 
@@ -69,15 +69,14 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
 
-        // Use capture phase to intercept before React synthetic events
+        // Use capture phase to intercept before React synthetic events.
+        // Do NOT block keydown — it breaks every input/textarea on the page (e.g. login form).
         window.addEventListener('click', handleGlobalEvent, true);
         window.addEventListener('touchstart', handleGlobalEvent, true);
-        window.addEventListener('keydown', handleGlobalEvent, true);
 
         return () => {
             window.removeEventListener('click', handleGlobalEvent, true);
             window.removeEventListener('touchstart', handleGlobalEvent, true);
-            window.removeEventListener('keydown', handleGlobalEvent, true);
         };
     }, [isTourActive]);
 

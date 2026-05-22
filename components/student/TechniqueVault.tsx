@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info, Heart, Users } from 'lucide-react';
+import { Play, Plus, Trash2, Video, Instagram, Youtube, Link as LinkIcon, X, XCircle, Settings, Palette, Edit2, Check, ChevronDown, Info, Heart, Users, Network, List as ListIcon } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { useNotification } from '../../context/NotificationContext';
 import { curriculumData } from '../../constants/curriculumData';
 import { getCurrentCurriculumWeek } from '../../utils/curriculum';
 import { InstructionBalloon } from '../ui/InstructionBalloon';
+import { TechniqueGraph } from './TechniqueGraph';
 
 interface Category {
     id: string;
@@ -18,7 +19,7 @@ interface Technique {
     link: string;
     category: string;
     category_id?: string;
-    platform: 'youtube' | 'instagram' | 'other';
+    platform: 'youtube' | 'instagram' | 'tiktok' | 'other';
     created_at?: string;
     likes_count?: number;
     is_liked?: boolean;
@@ -73,6 +74,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [editingTechnique, setEditingTechnique] = useState<Technique | null>(null);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+    const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
     const notification = useNotification();
     const currentWeekNum = propWeek || getCurrentCurriculumWeek();
 
@@ -245,15 +247,23 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
         }
     }, [selectedVideo]);
 
+    const TikTokIcon = ({ className }: { className?: string }) => (
+        <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.5a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.93z" />
+        </svg>
+    );
+
     const getPlatformIcon = (platform: string) => {
         if (platform === 'youtube') return <Youtube className="w-5 h-5 text-red-600" />;
         if (platform === 'instagram') return <Instagram className="w-5 h-5 text-pink-600" />;
+        if (platform === 'tiktok') return <TikTokIcon className="w-5 h-5 text-slate-900 dark:text-slate-100" />;
         return <LinkIcon className="w-5 h-5 text-blue-600" />;
     };
 
-    const inferPlatform = (url: string): 'youtube' | 'instagram' | 'other' => {
+    const inferPlatform = (url: string): 'youtube' | 'instagram' | 'tiktok' | 'other' => {
         if (url.includes('youtube') || url.includes('youtu.be')) return 'youtube';
         if (url.includes('instagram')) return 'instagram';
+        if (url.includes('tiktok.com')) return 'tiktok';
         return 'other';
     };
 
@@ -284,6 +294,13 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                 const baseLink = tech.link.split('?')[0].replace(/\/$/, '');
                 if (baseLink.includes('/reels/') || baseLink.includes('/reel/') || baseLink.includes('/p/') || baseLink.includes('/tv/')) {
                     return `${baseLink}/embed`;
+                }
+            }
+
+            if (tech.platform === 'tiktok') {
+                const match = tech.link.match(/\/video\/(\d+)/);
+                if (match && match[1]) {
+                    return `https://www.tiktok.com/embed/v2/${match[1]}`;
                 }
             }
 
@@ -450,8 +467,26 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                     {title}
                 </h2>
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 mr-2">
-                        <Video className="w-4 h-4 text-blue-600 dark:text-blue-500" />
+                    {/* Lista / Grafo toggle */}
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-2xl p-1 border border-slate-200 dark:border-slate-700/50">
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                            title="Visualização em Lista"
+                            aria-pressed={viewMode === 'list'}
+                        >
+                            <ListIcon className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Lista</span>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('graph')}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'graph' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                            title="Visualização em Grafo"
+                            aria-pressed={viewMode === 'graph'}
+                        >
+                            <Network className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Grafo</span>
+                        </button>
                     </div>
                     {!readOnly && (
                         <button
@@ -541,7 +576,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link (Instagram ou YouTube)</label>
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link (YouTube, Instagram ou TikTok)</label>
                             <input
                                 type="url"
                                 value={newLink}
@@ -721,7 +756,7 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link (Instagram ou YouTube)</label>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link (YouTube, Instagram ou TikTok)</label>
                                     <input
                                         type="url"
                                         value={newLink}
@@ -765,8 +800,9 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                 )
             }
 
-            {
-                filteredTechniques.length === 0 ? (
+            {viewMode === 'graph' ? (
+                <TechniqueGraph refreshSignal={techniques.length} />
+            ) : filteredTechniques.length === 0 ? (
                     <>
                         <div className="relative mb-6 text-center">
                             <div className="flex justify-center items-center gap-4 mb-4">
@@ -1120,9 +1156,9 @@ export const TechniqueVault: React.FC<TechniqueVaultProps> = ({
                             </div>
 
                             <div className="flex-grow flex items-center justify-center min-h-0">
-                                <div className={`w-full h-full flex items-center justify-center ${selectedVideo.platform === 'instagram' ? 'max-h-full' : 'aspect-video'}`}>
+                                <div className={`w-full h-full flex items-center justify-center ${selectedVideo.platform === 'instagram' || selectedVideo.platform === 'tiktok' ? 'max-h-full' : 'aspect-video'}`}>
                                     {getEmbedUrl(selectedVideo) ? (
-                                        <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5 w-full h-full ${selectedVideo.platform === 'instagram' ? 'max-w-full md:max-w-[450px]' : ''}`}>
+                                        <div className={`relative bg-black rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5 w-full h-full ${selectedVideo.platform === 'instagram' || selectedVideo.platform === 'tiktok' ? 'max-w-full md:max-w-[450px]' : ''}`}>
                                             <iframe
                                                 src={getEmbedUrl(selectedVideo)!}
                                                 className="w-full h-full"

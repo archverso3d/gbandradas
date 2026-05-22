@@ -1,6 +1,12 @@
 import React, { useEffect, useCallback } from 'react';
 import { X, Youtube, Instagram, ExternalLink } from 'lucide-react';
 
+const TikTokIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.5a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.93z" />
+    </svg>
+);
+
 interface VideoModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -8,9 +14,10 @@ interface VideoModalProps {
     title: string;
 }
 
-function inferPlatform(url: string): 'youtube' | 'instagram' | 'other' {
+function inferPlatform(url: string): 'youtube' | 'instagram' | 'tiktok' | 'other' {
     if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
     if (url.includes('instagram.com')) return 'instagram';
+    if (url.includes('tiktok.com')) return 'tiktok';
     return 'other';
 }
 
@@ -28,6 +35,10 @@ function getEmbedUrl(url: string, platform: string): string | null {
             if (baseLink.includes('/reels/') || baseLink.includes('/reel/') || baseLink.includes('/p/') || baseLink.includes('/tv/')) {
                 return `${baseLink}/embed`;
             }
+        }
+        if (platform === 'tiktok') {
+            const match = url.match(/\/video\/(\d+)/);
+            if (match && match[1]) return `https://www.tiktok.com/embed/v2/${match[1]}`;
         }
     } catch (e) {
         console.error('Error generating embed URL:', e);
@@ -56,7 +67,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose, url, ti
     const platform = inferPlatform(url);
     const embedUrl = getEmbedUrl(url, platform);
 
-    const PlatformIcon = platform === 'youtube' ? Youtube : platform === 'instagram' ? Instagram : ExternalLink;
+    const PlatformIcon = platform === 'youtube' ? Youtube : platform === 'instagram' ? Instagram : platform === 'tiktok' ? TikTokIcon : ExternalLink;
 
     return (
         <div
@@ -74,13 +85,13 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose, url, ti
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-800">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className={`p-2 rounded-xl ${platform === 'youtube' ? 'bg-red-600/20 text-red-500' : platform === 'instagram' ? 'bg-pink-600/20 text-pink-500' : 'bg-slate-700 text-slate-400'}`}>
+                        <div className={`p-2 rounded-xl ${platform === 'youtube' ? 'bg-red-600/20 text-red-500' : platform === 'instagram' ? 'bg-pink-600/20 text-pink-500' : platform === 'tiktok' ? 'bg-white/10 text-white' : 'bg-slate-700 text-slate-400'}`}>
                             <PlatformIcon className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-sm font-black text-white uppercase tracking-tight truncate">{title}</h3>
                             <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
-                                {platform === 'youtube' ? 'YouTube' : platform === 'instagram' ? 'Instagram' : 'Vídeo'}
+                                {platform === 'youtube' ? 'YouTube' : platform === 'instagram' ? 'Instagram' : platform === 'tiktok' ? 'TikTok' : 'Vídeo'}
                             </p>
                         </div>
                     </div>
@@ -94,7 +105,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose, url, ti
                 </div>
 
                 {/* Video Content */}
-                <div className="relative w-full bg-black" style={{ paddingTop: platform === 'instagram' ? '100%' : '56.25%' }}>
+                <div className="relative w-full bg-black" style={{ paddingTop: platform === 'instagram' ? '100%' : platform === 'tiktok' ? '177.78%' : '56.25%' }}>
                     {embedUrl ? (
                         <iframe
                             src={embedUrl}

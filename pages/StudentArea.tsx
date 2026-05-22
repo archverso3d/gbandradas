@@ -10,11 +10,12 @@ import { TrainingHistory } from '../components/student/TrainingHistory';
 import { TechniqueHistory } from '../components/student/TechniqueHistory';
 import { TrainingFocusChart } from '../components/student/TrainingFocusChart';
 import { QuizSection } from '../components/student/QuizSection';
-import { LogOut, User as UserIcon, Settings, Calendar, ArrowUp, Star } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, ArrowUp, Star, BarChart3, Award, Bookmark } from 'lucide-react';
 import { adminService } from '../services/admin';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { getCurrentCurriculumWeek, getClassLabelByDay } from '../utils/curriculum';
+import { calculateNextGraduation } from '../utils/graduation';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { UserMural, MuralProfile } from '../components/student/UserMural';
 import { InstructionBalloon } from '../components/ui/InstructionBalloon';
@@ -46,6 +47,7 @@ interface Graduation {
     degrees?: number;
     start_date: string;
     promotion_date?: string;
+    last_promotion_date?: string;
     next_forecast?: string;
     student_category?: string;
     quiz_achievements?: string[];
@@ -77,6 +79,7 @@ const StudentArea: React.FC = () => {
     const [techniqueLinks, setTechniqueLinks] = useState<Record<string, string>>({});
     const [showBackToTop, setShowBackToTop] = useState(false);
     const [sharing, setSharing] = useState(false);
+    const [activeTab, setActiveTab] = useState<'evolucao' | 'performance' | 'tecnicas'>('evolucao');
     const shareTemplateRef = React.useRef<HTMLDivElement>(null);
     const notification = useNotification();
 
@@ -157,6 +160,7 @@ const StudentArea: React.FC = () => {
                             current_belt: profileData.current_belt || 'Faixa Branca',
                             degrees: profileData.degrees || 0,
                             start_date: profileData.start_date || profileData.created_at,
+                            last_promotion_date: profileData.last_promotion_date,
                             next_forecast: profileData.next_graduation_date,
                             student_category: profileData.student_category || 'GB2'
                         };
@@ -199,6 +203,7 @@ const StudentArea: React.FC = () => {
                     current_belt: profile.current_belt || 'Faixa Branca',
                     degrees: profile.degrees || 0,
                     start_date: profile.start_date || (profile as any).created_at,
+                    last_promotion_date: (profile as any).last_promotion_date,
                     next_forecast: (profile as any).next_graduation_date,
                     student_category: profile.student_category || 'GB2',
                     quiz_achievements: profile.quiz_achievements || []
@@ -297,7 +302,6 @@ const StudentArea: React.FC = () => {
             setLoading(true);
             await adminService.removeAttendance(id);
             if (user) await fetchData(user.id);
-            notification.alert('Presença removida com sucesso.', 'Sucesso');
         } catch (error: any) {
             console.error('Error removing attendance:', error);
             notification.alert(`Erro ao remover presença: ${error.message || 'Erro desconhecido'}`, 'Erro');
@@ -467,6 +471,69 @@ const StudentArea: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // Live-computed next graduation forecast for the logged-in user, based on
+    // attendance + last_promotion_date. Falls back to stored value when viewing a peer.
+    const liveNextForecast = React.useMemo(() => {
+        if (selectedMuralUser) return graduation?.next_forecast;
+        const lastPromo = graduation?.last_promotion_date || graduation?.promotion_date;
+        if (!lastPromo) return graduation?.next_forecast;
+        const est = calculateNextGraduation(
+            graduation?.current_belt || 'Faixa Branca',
+            graduation?.degrees || 0,
+            lastPromo,
+            attendance
+        );
+        return est.date || graduation?.next_forecast;
+    }, [selectedMuralUser, graduation?.current_belt, graduation?.degrees, graduation?.last_promotion_date, graduation?.promotion_date, graduation?.next_forecast, attendance]);
+
+    const handleUpdateLastPromotion = async (newDate: string) => {
+        if (!user?.id || selectedMuralUser) return;
+
+        const belt = graduation?.current_belt || 'Faixa Branca';
+        const degrees = graduation?.degrees || 0;
+        const lastPromo = newDate || null;
+
+        const estimate = lastPromo
+            ? calculateNextGraduation(belt, degrees, lastPromo, attendance)
+            : { date: null };
+
+        const previousGraduation = graduation;
+        setGraduation(prev => prev ? {
+            ...prev,
+            last_promotion_date: lastPromo || undefined,
+            promotion_date: lastPromo || undefined,
+            next_forecast: estimate.date || undefined,
+        } : null);
+
+        try {
+            await adminService.updateStudentDetails(user.id, {
+                last_promotion_date: lastPromo,
+                next_graduation_date: estimate.date,
+            });
+            await refreshProfile();
+        } catch (error: any) {
+            console.error('Error updating last promotion date:', error);
+            notification.alert(`Erro ao salvar última graduação: ${error?.message || 'Erro desconhecido'}`, 'Erro');
+            setGraduation(previousGraduation);
+        }
+    };
+
+    const handleUpdateStartDate = async (newDate: string) => {
+        if (!user?.id || selectedMuralUser || !newDate) return;
+
+        const previousGraduation = graduation;
+        setGraduation(prev => prev ? { ...prev, start_date: newDate } : null);
+
+        try {
+            await adminService.updateStudentDetails(user.id, { start_date: newDate });
+            await refreshProfile();
+        } catch (error: any) {
+            console.error('Error updating start date:', error);
+            notification.alert(`Erro ao salvar início da jornada: ${error?.message || 'Erro desconhecido'}`, 'Erro');
+            setGraduation(previousGraduation);
+        }
+    };
+
     const handleUpdateGraduation = async (updates: Partial<Graduation>) => {
         if (!user?.id || selectedMuralUser) return;
 
@@ -506,16 +573,15 @@ const StudentArea: React.FC = () => {
             }
 
             // Wait for DOM re-layout
-            await new Promise(resolve => setTimeout(resolve, 150));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
-            // Use toPng (better mobile compat) — run twice to fix lazy-loaded font/style issues
-            await toPng(el, { quality: 0.8, width: 1080, height: 1080, pixelRatio: 1, cacheBust: true, backgroundColor: '#020617' });
+            // Use toPng with higher quality for sharing — Instagram Stories format
             const dataUrl = await toPng(el, {
-                quality: 0.9,
+                quality: 0.95,
                 backgroundColor: '#020617',
                 width: 1080,
-                height: 1080,
-                pixelRatio: 1.5,
+                height: 1920,
+                pixelRatio: 2, // Better for high-res screens and social media
                 cacheBust: true
             });
 
@@ -526,30 +592,56 @@ const StudentArea: React.FC = () => {
             // Convert dataURL to Blob
             const res = await fetch(dataUrl);
             generatedBlob = await res.blob();
-
-
-
             const file = new File([generatedBlob], `meu-progresso-gb-${Date.now()}.png`, { type: 'image/png' });
 
-            const canShare = typeof navigator.share === 'function' &&
+            // Detect real mobile vs Chrome DevTools device emulation.
+            // DevTools fakes the userAgent but the underlying OS leaks through
+            // navigator.platform (still returns "Win32"/"MacIntel"/"Linux..." in emulation).
+            const ua = navigator.userAgent;
+            const platform = (navigator.platform || '').toLowerCase();
+            const isMobileUA = /Android|iPhone|iPad|iPod/i.test(ua);
+            const isDesktopOS = /win|mac|linux/i.test(platform) && !/arm/i.test(platform);
+            const isRealMobile = isMobileUA && !isDesktopOS;
+            const canNativeShare = typeof navigator.share === 'function' &&
                 typeof navigator.canShare === 'function' &&
                 navigator.canShare({ files: [file] });
 
-            if (canShare) {
+            // 1. MOBILE: Native Share (WhatsApp, Instagram Stories, etc.)
+            // We deliberately skip navigator.share on desktop — the Windows 11
+            // share dialog frequently fails to enumerate targets and shows
+            // "Não foi possível mostrar todas as maneiras de compartilhar".
+            if (isRealMobile && canNativeShare) {
                 try {
                     await navigator.share({
                         files: [file],
                         title: 'Meu Progresso - Gracie Barra Andradas',
                         text: 'Confira minha evolução na GB Andradas! #EquipeGB #GBAndradas'
                     });
-                    return; // Shared successfully
+                    notification.alert('Relatório compartilhado com sucesso!', 'Sucesso');
+                    return;
                 } catch (shareError: any) {
-                    if (shareError.name === 'AbortError') return; // User cancelled
-                    console.warn('navigator.share failed, falling back to download:', shareError);
+                    if (shareError.name === 'AbortError') return;
+                    console.warn('Native share failed:', shareError);
                 }
             }
 
-            // Fallback: download the image directly
+            // 2. FALLBACK: Copy to Clipboard (works on desktop, and as a
+            // safety net when mobile share fails — including DevTools
+            // device-emulation on Windows where navigator.share opens the
+            // broken Windows share dialog).
+            if (typeof navigator.clipboard?.write === 'function' && typeof ClipboardItem !== 'undefined') {
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': generatedBlob })
+                    ]);
+                    notification.alert('Relatório copiado para a área de transferência! Você já pode colá-lo (Ctrl+V) no WhatsApp Web, Instagram ou qualquer rede social.', 'Copiado!');
+                    return;
+                } catch (clipError) {
+                    console.warn('Clipboard copy failed:', clipError);
+                }
+            }
+
+            // 3. Fallback: Download
             downloadBlob(generatedBlob);
         } catch (error: any) {
             console.error('Error sharing report:', error);
@@ -766,11 +858,36 @@ const StudentArea: React.FC = () => {
 
                             {/* Refined Bottom Bar with 'Ponteira' Block on the Right */}
                             <div className="mt-auto border-t border-black/20 flex items-stretch h-9 relative overflow-hidden">
-                                {/* Left side - clean space with subtle category badge */}
-                                <div className="flex-1 px-5 flex items-center">
-                                    <div className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[8px] font-black italic text-white/40 tracking-wider">
+                                {/* Left side - category badge + graduation dates */}
+                                <div className="flex-1 px-3 sm:px-5 flex items-center gap-2 sm:gap-3 min-w-0">
+                                    <div className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/5 text-[8px] font-black italic text-white/40 tracking-wider flex-shrink-0">
                                         {graduation?.student_category || 'GB2'}
                                     </div>
+                                    {(() => {
+                                        const belt = (graduation?.current_belt || 'Faixa Branca').toLowerCase();
+                                        const isLight = belt.includes('white') || belt.includes('branca');
+                                        const labelCls = isLight ? 'text-slate-500' : 'text-white/50';
+                                        const valueCls = isLight ? 'text-slate-800' : 'text-white/90';
+                                        const fmt = (d?: string) => {
+                                            if (!d) return '—';
+                                            return new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR');
+                                        };
+                                        const lastPromo = graduation?.last_promotion_date || graduation?.promotion_date;
+                                        if (!lastPromo && !liveNextForecast) return null;
+                                        return (
+                                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 whitespace-nowrap">
+                                                <div className="flex flex-col leading-none">
+                                                    <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-wider italic ${labelCls}`}>Última</span>
+                                                    <span className={`text-[9px] sm:text-[10px] font-black italic tabular-nums mt-0.5 ${valueCls}`}>{fmt(lastPromo)}</span>
+                                                </div>
+                                                <span className="w-px h-5 bg-white/10 flex-shrink-0" />
+                                                <div className="flex flex-col leading-none">
+                                                    <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-wider italic ${labelCls}`}>Próxima</span>
+                                                    <span className={`text-[9px] sm:text-[10px] font-black italic tabular-nums mt-0.5 ${valueCls}`}>{fmt(liveNextForecast)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Ponteira (Belt Tip) - Distinct block on the right */}
@@ -803,118 +920,152 @@ const StudentArea: React.FC = () => {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column: Graduation & Calendar */}
-                    <div className="lg:col-span-1 space-y-8">
-                        {/* Calendar */}
-                        <CalendarComponent
-                            attendanceData={attendance}
-                            onMarkToday={() => handleMarkAttendance()}
-                            onMarkPast={(date) => handleMarkAttendance(date)}
-                            onRemoveAttendance={handleRemoveAttendance}
-                            onClear={handleClear}
-                            readOnly={!!selectedMuralUser}
-                            currentWeek={currentWeek}
-                        />
+                {/* Tabs Navigation */}
+                {(() => {
+                    const tabs: { id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+                        { id: 'evolucao', label: 'Evolução', icon: Award },
+                        { id: 'performance', label: 'Performance', icon: BarChart3 },
+                        { id: 'tecnicas', label: 'Técnicas', icon: Bookmark },
+                    ];
+                    return (
+                        <div className="mb-6 -mx-3 sm:mx-0 sticky top-20 sm:top-24 lg:top-32 z-30 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md py-2 sm:py-3 sm:rounded-2xl sm:shadow-lg sm:border sm:border-slate-200 dark:sm:border-slate-800">
+                            <div className="px-3 sm:px-4">
+                                <div className="flex gap-2">
+                                    {tabs.map(({ id, label, icon: Icon }) => {
+                                        const isActive = activeTab === id;
+                                        return (
+                                            <button
+                                                key={id}
+                                                onClick={() => setActiveTab(id)}
+                                                className={`flex-1 flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-black uppercase text-[10px] sm:text-xs tracking-wider italic transition-all duo-btn-3d min-h-[44px] ${
+                                                    isActive
+                                                        ? 'bg-red-600 text-white shadow-[0_3px_0_0_#991b1b] scale-[1.02]'
+                                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-[0_3px_0_0_#e2e8f0] dark:shadow-[0_3px_0_0_#0f172a] hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95'
+                                                }`}
+                                                aria-pressed={isActive}
+                                            >
+                                                <Icon className="w-4 h-4 flex-shrink-0" />
+                                                <span>{label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
-                        {/* Training History & Stats */}
-                        <TrainingHistory
-                            attendanceData={attendance}
-                            studentStartDate={graduation?.start_date || '2024-01-01'}
-                            studentCategory={graduation?.student_category || 'GB2'}
-                        />
+                {/* Tab Content */}
+                <div className="space-y-8 animate-in fade-in duration-300" key={activeTab}>
+                    {activeTab === 'evolucao' && (
+                        <>
+                            <CalendarComponent
+                                attendanceData={attendance}
+                                onMarkToday={() => handleMarkAttendance()}
+                                onMarkPast={(date) => handleMarkAttendance(date)}
+                                onRemoveAttendance={handleRemoveAttendance}
+                                onClear={handleClear}
+                                readOnly={!!selectedMuralUser}
+                                currentWeek={currentWeek}
+                            />
+                            <TrainingHistory
+                                attendanceData={attendance}
+                                studentStartDate={graduation?.start_date || '2024-01-01'}
+                                studentCategory={graduation?.student_category || 'GB2'}
+                            />
+                            <GraduationCard
+                                currentBelt={graduation?.current_belt || 'Faixa Branca'}
+                                degrees={graduation?.degrees || 0}
+                                startDate={graduation?.start_date || '2024-01-01'}
+                                lastPromotionDate={graduation?.last_promotion_date || graduation?.promotion_date}
+                                nextForecast={liveNextForecast}
+                                readOnly={!!selectedMuralUser}
+                                onChangeLastPromotionDate={handleUpdateLastPromotion}
+                                onChangeStartDate={handleUpdateStartDate}
+                            />
+                            {(graduation?.current_belt || '').toLowerCase().match(/azul|roxa|marrom|preta/) && (
+                                <QuizSection currentBelt={graduation?.current_belt || ''} />
+                            )}
+                        </>
+                    )}
 
-                        {/* Technique History */}
-                        <TechniqueHistory
-                            attendanceData={attendance}
-                            studentCategory={graduation?.student_category || 'GB2'}
-                        />
+                    {activeTab === 'performance' && (
+                        <>
+                            <ReportSummaryCard
+                                attendanceData={attendance}
+                                onShare={handleShare}
+                                sharing={sharing}
+                                currentBelt={graduation?.current_belt || 'Faixa Branca'}
+                                degrees={graduation?.degrees || 0}
+                                completedClasses={attendance.filter(r => (['present', 'presente', 'a', 'b', 'n', 'p'].includes(r.status.toLowerCase()))).length}
+                                performance={Math.round((attendance.filter(r => (['present', 'presente', 'a', 'b', 'n', 'p'].includes(r.status.toLowerCase()))).length / Math.max(1, attendance.length)) * 100)}
+                                streak={(() => {
+                                    if (attendance.length === 0) return 0;
 
-                        {/* Unified Performance Report Card */}
-                        <ReportSummaryCard
-                            attendanceData={attendance}
-                            onShare={handleShare}
-                            sharing={sharing}
-                            currentBelt={graduation?.current_belt || 'Faixa Branca'}
-                            degrees={graduation?.degrees || 0}
-                            completedClasses={attendance.filter(r => (['present', 'presente', 'a', 'b', 'n', 'p'].includes(r.status.toLowerCase()))).length}
-                            performance={Math.round((attendance.filter(r => (['present', 'presente', 'a', 'b', 'n', 'p'].includes(r.status.toLowerCase()))).length / Math.max(1, attendance.length)) * 100)}
-                            streak={(() => {
-                                if (attendance.length === 0) return 0;
+                                    const weeksMap = new Set<string>();
+                                    attendance.forEach(record => {
+                                        if (['present', 'presente', 'a', 'b', 'n', 'p'].includes(record.status.toLowerCase())) {
+                                            const date = new Date(record.date + 'T12:00:00');
+                                            const target = new Date(date.valueOf());
+                                            const dayNr = (date.getDay() + 6) % 7;
+                                            target.setDate(target.getDate() - dayNr + 3);
+                                            const firstThursday = target.valueOf();
+                                            target.setMonth(0, 1);
+                                            if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+                                            const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+                                            weeksMap.add(`${target.getFullYear()}-${weekNum}`);
+                                        }
+                                    });
 
-                                // Group into weeks
-                                const weeksMap = new Set<string>();
-                                attendance.forEach(record => {
-                                    if (['present', 'presente', 'a', 'b', 'n', 'p'].includes(record.status.toLowerCase())) {
-                                        const date = new Date(record.date + 'T12:00:00');
-                                        const target = new Date(date.valueOf());
-                                        const dayNr = (date.getDay() + 6) % 7;
+                                    let streak = 0;
+                                    let cursorDate = new Date();
+                                    cursorDate.setHours(12, 0, 0, 0);
+
+                                    for (let i = 0; i < 52; i++) {
+                                        const target = new Date(cursorDate.valueOf());
+                                        const dayNr = (cursorDate.getDay() + 6) % 7;
                                         target.setDate(target.getDate() - dayNr + 3);
                                         const firstThursday = target.valueOf();
                                         target.setMonth(0, 1);
                                         if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
                                         const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-                                        weeksMap.add(`${target.getFullYear()}-${weekNum}`);
+                                        const weekId = `${target.getFullYear()}-${weekNum}`;
+
+                                        if (weeksMap.has(weekId)) {
+                                            streak++;
+                                        } else {
+                                            if (i !== 0) break;
+                                        }
+                                        cursorDate.setDate(cursorDate.getDate() - 7);
                                     }
-                                });
+                                    return streak;
+                                })()}
+                            />
+                            <WeightTracker
+                                userId={selectedMuralUser ? selectedMuralUser.user_id : (user?.id || '')}
+                                readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
+                            />
+                        </>
+                    )}
 
-                                let streak = 0;
-                                let cursorDate = new Date();
-                                cursorDate.setHours(12, 0, 0, 0);
-
-                                for (let i = 0; i < 52; i++) {
-                                    const target = new Date(cursorDate.valueOf());
-                                    const dayNr = (cursorDate.getDay() + 6) % 7;
-                                    target.setDate(target.getDate() - dayNr + 3);
-                                    const firstThursday = target.valueOf();
-                                    target.setMonth(0, 1);
-                                    if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-                                    const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-                                    const weekId = `${target.getFullYear()}-${weekNum}`;
-
-                                    if (weeksMap.has(weekId)) {
-                                        streak++;
-                                    } else {
-                                        if (i !== 0) break; // Allow gap in current week
-                                    }
-                                    cursorDate.setDate(cursorDate.getDate() - 7);
-                                }
-                                return streak;
-                            })()}
-                        />
-
-                        {/* BJJ Rules Quiz */}
-                        {(graduation?.current_belt || '').toLowerCase().match(/azul|roxa|marrom|preta/) && (
-                            <QuizSection currentBelt={graduation?.current_belt || ''} />
-                        )}
-
-                        {/* Graduation Card */}
-                        <GraduationCard
-                            currentBelt={graduation?.current_belt || 'Faixa Branca'}
-                            degrees={graduation?.degrees || 0}
-                            startDate={graduation?.start_date || '2024-01-01'}
-                            lastPromotionDate={graduation?.promotion_date}
-                            nextForecast={graduation?.next_forecast}
-                        />
-                    </div>
-
-                    <div className="lg:col-span-2 space-y-8">
-                        <TechniqueVault
-                            techniques={techniques}
-                            onAddTechnique={handleAddTechnique}
-                            onUpdateTechnique={handleUpdateTechnique}
-                            onDeleteTechnique={handleDeleteTechnique}
-                            onToggleLike={handleToggleLike}
-                            readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
-                            title={selectedMuralUser ? `Técnicas de ${selectedMuralUser.full_name?.split(' ')[0]}` : "Minhas Técnicas"}
-                            isLoading={loading}
-                        />
-
-                        <WeightTracker
-                            userId={selectedMuralUser ? selectedMuralUser.user_id : (user?.id || '')}
-                            readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
-                        />
-                    </div>
+                    {activeTab === 'tecnicas' && (
+                        <>
+                            <TechniqueHistory
+                                attendanceData={attendance}
+                                studentCategory={graduation?.student_category || 'GB2'}
+                            />
+                            <TechniqueVault
+                                techniques={techniques}
+                                onAddTechnique={handleAddTechnique}
+                                onUpdateTechnique={handleUpdateTechnique}
+                                onDeleteTechnique={handleDeleteTechnique}
+                                onToggleLike={handleToggleLike}
+                                readOnly={!!selectedMuralUser && selectedMuralUser.user_id !== user?.id}
+                                title={selectedMuralUser ? `Técnicas de ${selectedMuralUser.full_name?.split(' ')[0]}` : "Minhas Técnicas"}
+                                isLoading={loading}
+                            />
+                        </>
+                    )}
                 </div>
 
                 {/* Hidden Template for Image Generation */}
